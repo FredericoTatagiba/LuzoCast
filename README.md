@@ -34,7 +34,7 @@ aprovação. Detalhes em [`docs/security.md`](docs/security.md).
 
 ## Instalação (usuário final)
 
-Baixe `LuzoCast-Setup-x.y.z.exe` nos Releases e instale. O instalador já traz tudo
+Baixe `LuzoCast-Setup-x.y.z.exe` em [**Releases**](https://github.com/FredericoTatagiba/LuzoCast/releases) e instale. O instalador já traz tudo
 (Electron, página do espectador e túnel) — não precisa de Node nem de nada mais.
 Sem certificado de assinatura ainda: o Windows pode mostrar "Editor desconhecido" →
 *Mais informações* → *Executar assim mesmo*.

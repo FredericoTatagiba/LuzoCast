@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "pnpm --filter @luzocast/viewer build && electron-vite dev",
     "build": "electron-vite build",
-    "dist": "pnpm --filter @luzocast/viewer build && electron-vite build && node scripts/fetch-cloudflared.mjs --if-missing && electron-builder --win --x64",
+    "dist": "pnpm --filter @luzocast/viewer build && electron-vite build && node scripts/fetch-cloudflared.mjs --if-missing && electron-builder --win --x64 --publish never",
     "typecheck": "tsc -p tsconfig.node.json && vue-tsc -p tsconfig.web.json",
     "fetch:cloudflared": "node scripts/fetch-cloudflared.mjs"
   },
@@ -35,5 +35,5 @@
     "zod": "^3.24.0"
   },
   "author": "Frederico Tatagiba",
-  "homepage": "https://github.com/FredericoTatagiba/luzocast"
+  "homepage": "https://github.com/FredericoTatagiba/LuzoCast"
 }

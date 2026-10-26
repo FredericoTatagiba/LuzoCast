@@ -1,0 +1,64 @@
+# Publica o instalador do Windows no GitHub Releases.
+# Dispara ao enviar uma tag de versão:   git tag v0.1.1 && git push origin v0.1.1
+# A versão do instalador vem de apps/host/package.json — mantenha igual à tag.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Conferir se a tag bate com a versão do app
+        shell: pwsh
+        run: |
+          $v = (Get-Content apps/host/package.json | ConvertFrom-Json).version
+          if ("v$v" -ne "${{ github.ref_name }}") { throw "Tag ${{ github.ref_name }} != versão do app v$v" }
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm test
+
+      # Builda viewer + app, baixa o cloudflared verificando o SHA-256 e gera o NSIS
+      - run: pnpm dist
+
+      - name: Gerar SHA256SUMS
+        shell: pwsh
+        run: |
+          Get-ChildItem apps/host/release/LuzoCast-Setup-*.exe | ForEach-Object {
+            "$((Get-FileHash $_ -Algorithm SHA256).Hash.ToLower())  $($_.Name)"
+          } | Out-File apps/host/release/SHA256SUMS.txt -Encoding ascii
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            apps/host/release/LuzoCast-Setup-*.exe
+            apps/host/release/SHA256SUMS.txt
+          # Enquanto não houver code signing e testes amplos, toda versão sai como pré-lançamento.
+          prerelease: true
+          generate_release_notes: true
+          body: |
+            ## Como instalar
+            1. Baixe o arquivo **LuzoCast-Setup-….exe** em *Assets*, abaixo.
+            2. O Windows pode avisar "Editor desconhecido" (o app ainda não tem assinatura digital):
+               clique em **Mais informações → Executar assim mesmo**.
+            3. Abra o LuzoCast e use **Verificar se está tudo pronto** antes da primeira transmissão.
+
+            Confira a integridade do download com o `SHA256SUMS.txt`:
+            `Get-FileHash .\LuzoCast-Setup-*.exe -Algorithm SHA256`
+
+            ⚠️ Versão de pré-lançamento: requer Windows 10/11 x64.
