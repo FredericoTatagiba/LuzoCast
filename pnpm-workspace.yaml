@@ -1,0 +1,8 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# Electron baixa o binário no postinstall; liberado explicitamente.
+onlyBuiltDependencies:
+  - electron
+  - esbuild
