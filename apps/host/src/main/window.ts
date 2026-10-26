@@ -1,4 +1,4 @@
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { BrowserWindow, shell } from 'electron';
 
 /**
@@ -7,12 +7,14 @@ import { BrowserWindow, shell } from 'electron';
  */
 export function createMainWindow(): BrowserWindow {
   const win = new BrowserWindow({
-    width: 980,
-    height: 720,
+    width: 1100,
+    height: 760,
     minWidth: 360,
     minHeight: 560,
     title: 'LuzoCast',
-    backgroundColor: '#0f0e0c',
+    backgroundColor: '#0f121a',
+    // Empacotado, o ícone vem do .exe (build/icon.ico); em dev, do PNG.
+    ...(process.env['ELECTRON_RENDERER_URL'] ? { icon: resolve(__dirname, '../../build/icon.png') } : {}),
     show: false,
     autoHideMenuBar: true,
     webPreferences: {

@@ -19,7 +19,8 @@
 - [x] Escolha do IP da LAN ignora adaptadores virtuais (WSL, Docker, Hyper-V, VPNs)
 - [ ] Áudio só da janela capturada — [ADR-0008](./adr/0008-audio-por-janela.md)
 - [ ] Link personalizado — [ADR-0009](./adr/0009-link-personalizado.md)
-- [ ] Ícone do app (`apps/host/build/icon.ico`)
+- [x] Ícone do app (`apps/host/build/icon.svg` → `pnpm --filter @luzocast/host icons`)
+- [x] Layout responsivo (celular, janela estreita, tablet, desktop largo)
 
 ## Fase 2 — Internet
 - [ ] `CloudflareQuickTunnelProvider` + `TunnelSupervisor` integrados

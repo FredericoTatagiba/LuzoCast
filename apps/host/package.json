@@ -1,7 +1,7 @@
 {
   "name": "@luzocast/host",
   "productName": "LuzoCast",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "license": "AGPL-3.0-only",
   "description": "LuzoCast — app desktop do host",
@@ -11,7 +11,8 @@
     "build": "electron-vite build",
     "dist": "pnpm --filter @luzocast/viewer build && electron-vite build && node scripts/fetch-cloudflared.mjs --if-missing && electron-builder --win --x64 --publish never",
     "typecheck": "tsc -p tsconfig.node.json && vue-tsc -p tsconfig.web.json",
-    "fetch:cloudflared": "node scripts/fetch-cloudflared.mjs"
+    "fetch:cloudflared": "node scripts/fetch-cloudflared.mjs",
+    "icons": "node scripts/build-icons.mjs"
   },
   "devDependencies": {
     "@fastify/static": "^8.0.0",
@@ -23,6 +24,7 @@
     "@luzocast/transport": "workspace:*",
     "@luzocast/tunnel": "workspace:*",
     "@luzocast/ui": "workspace:*",
+    "@resvg/resvg-js": "^2.6.2",
     "@vitejs/plugin-vue": "^5.2.0",
     "electron": "^39.0.0",
     "electron-builder": "^26.18.0",

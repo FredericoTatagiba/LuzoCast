@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="32" height="32">
+  <!-- LuzoCast — versão para 16–32 px: cores chapadas e traços mais grossos. -->
+  <rect width="100" height="100" rx="20" fill="#161a24"/>
+  <path d="M22 20 L22 80 L60 50 Z" fill="#ff7a1a" stroke="#ff7a1a" stroke-width="6" stroke-linejoin="round"/>
+  <g fill="none" stroke="#b46bff" stroke-width="11" stroke-linecap="round">
+    <path d="M70 50 H86"/>
+    <path d="M68 34 L80 25"/>
+    <path d="M68 66 L80 75"/>
+  </g>
+</svg>

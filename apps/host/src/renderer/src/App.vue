@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { LcButton, LcCard, LcLinkCard, LcStatGrid, LcStatusPill, LcViewerList, type PillTone } from '@luzocast/ui';
+import { LcButton, LcCard, LcLinkCard, LcLogo, LcStatGrid, LcStatusPill, LcViewerList, type PillTone } from '@luzocast/ui';
 import type { NetworkMode } from '../../shared/api';
 import ReadinessCard from './components/ReadinessCard.vue';
 import SourcePicker from './components/SourcePicker.vue';
@@ -57,14 +57,15 @@ function start() {
 <template>
   <main class="host">
     <header class="host__bar">
-      <strong class="host__brand">LuzoCast</strong>
+      <LcLogo compact />
       <LcStatusPill :tone="pill.tone" :label="pill.label" />
     </header>
 
     <p v-if="host.error.value" class="host__error" role="alert">{{ host.error.value }}</p>
 
-    <div v-if="!isLive" class="host__grid">
-      <LcCard class="host__sources">
+    <!-- Antes de transmitir: escolher fonte, opções e verificar prontidão -->
+    <div v-if="!isLive" class="host__grid host__grid--setup">
+      <LcCard class="area-sources">
         <template #title>O que você quer transmitir?</template>
         <SourcePicker v-model="sourceId" :sources="host.sources.value" />
         <template #actions>
@@ -72,78 +73,74 @@ function start() {
         </template>
       </LcCard>
 
-      <div class="host__side">
-        <LcCard>
-          <template #title>Opções</template>
-          <StreamOptions
-            v-model:mode="mode"
-            v-model:profile="profile"
-            v-model:system-audio="systemAudio"
-            v-model:alert-sound="alertSound"
-            :capture-is-window="captureIsWindow"
-            @test-alert="host.testAlert()"
-          />
-          <template #actions>
-            <LcButton size="lg" block :disabled="!sourceId || busy" @click="start">
-              {{ busy ? 'Iniciando…' : 'Transmitir' }}
-            </LcButton>
-          </template>
-        </LcCard>
-
-        <ReadinessCard
-          :items="readiness.items.value"
-          :running="readiness.running.value"
-          :summary="readiness.summary.value"
-          @run="readiness.run()"
+      <LcCard class="area-options">
+        <template #title>Opções</template>
+        <StreamOptions
+          v-model:mode="mode"
+          v-model:profile="profile"
+          v-model:system-audio="systemAudio"
+          v-model:alert-sound="alertSound"
+          :capture-is-window="captureIsWindow"
+          @test-alert="host.testAlert()"
         />
+      </LcCard>
+
+      <!-- Em telas estreitas fica fixo no rodapé, sempre ao alcance -->
+      <div class="area-cta host__cta">
+        <LcButton size="lg" block :disabled="!sourceId || busy" @click="start">
+          {{ busy ? 'Iniciando…' : sourceId ? 'Transmitir' : 'Escolha o que transmitir' }}
+        </LcButton>
       </div>
+
+      <ReadinessCard
+        class="area-ready"
+        :items="readiness.items.value"
+        :running="readiness.running.value"
+        :summary="readiness.summary.value"
+        @run="readiness.run()"
+      />
     </div>
 
-    <div v-else class="host__grid">
-      <div class="host__main">
-        <LcCard>
-          <template #title>Envie este link</template>
-          <LcLinkCard v-if="host.shareUrl.value" :url="host.shareUrl.value" :warning="host.warning.value ?? undefined" @copy="host.copy(host.shareUrl.value)" />
-          <template #actions>
-            <LcButton variant="danger" block :disabled="busy" @click="host.stop()">Encerrar transmissão</LcButton>
-          </template>
-        </LcCard>
+    <!-- Ao vivo: link, espectadores e desempenho -->
+    <div v-else class="host__grid host__grid--live">
+      <LcCard class="area-link">
+        <template #title>Envie este link</template>
+        <LcLinkCard v-if="host.shareUrl.value" :url="host.shareUrl.value" :warning="host.warning.value ?? undefined" @copy="host.copy(host.shareUrl.value)" />
+        <template #actions>
+          <LcButton variant="danger" block :disabled="busy" @click="host.stop()">Encerrar transmissão</LcButton>
+        </template>
+      </LcCard>
 
-        <LcCard v-if="metrics.items.value.length">
-          <template #title>Desempenho</template>
-          <LcStatGrid :items="metrics.items.value" />
-        </LcCard>
-      </div>
-
-      <LcCard>
+      <LcCard class="area-viewers">
         <template #title>Espectadores ({{ admittedCount }})</template>
         <LcViewerList :viewers="host.viewers.value" @admit="host.admit" @reject="host.reject" @kick="host.kick" />
+      </LcCard>
+
+      <LcCard v-if="metrics.items.value.length" class="area-metrics">
+        <template #title>Desempenho</template>
+        <LcStatGrid :items="metrics.items.value" />
       </LcCard>
     </div>
   </main>
 </template>
 
 <style scoped>
+/* Mobile-first. Breakpoints: 720px (2 colunas) · 1024px (layout de desktop). */
 .host {
   min-height: 100vh;
-  padding: var(--lc-space-4);
+  max-width: var(--lc-content-max);
+  margin: 0 auto;
+  padding: var(--lc-gutter);
   display: grid;
   align-content: start;
   gap: var(--lc-space-4);
 }
-@media (min-width: 768px) {
-  .host {
-    padding: var(--lc-space-6);
-  }
-}
 .host__bar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-}
-.host__brand {
-  color: var(--lc-accent);
-  font-size: 1.2rem;
+  gap: var(--lc-space-3);
 }
 .host__error {
   margin: 0;
@@ -151,21 +148,78 @@ function start() {
   border-radius: var(--lc-radius-sm);
   background: color-mix(in srgb, var(--lc-live) 15%, transparent);
   color: var(--lc-text);
+  overflow-wrap: anywhere;
 }
 .host__grid {
   display: grid;
   gap: var(--lc-space-4);
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
 }
-@media (min-width: 900px) {
-  .host__grid {
-    grid-template-columns: 3fr 2fr;
-    align-items: start;
+.host__grid > * {
+  min-width: 0;
+}
+.area-sources { grid-area: sources; }
+.area-options { grid-area: options; }
+.area-cta { grid-area: cta; }
+.area-ready { grid-area: ready; }
+.area-link { grid-area: link; }
+.area-viewers { grid-area: viewers; }
+.area-metrics { grid-area: metrics; }
+
+.host__grid--setup {
+  grid-template-areas: 'sources' 'options' 'ready' 'cta';
+}
+.host__grid--live {
+  grid-template-areas: 'link' 'viewers' 'metrics';
+}
+
+/* Botão principal fixo no rodapé enquanto a tela for estreita */
+.host__cta {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  padding: var(--lc-space-3) 0 calc(var(--lc-space-3) + env(safe-area-inset-bottom));
+  margin: 0 calc(-1 * var(--lc-gutter)) calc(-1 * var(--lc-gutter));
+  padding-inline: var(--lc-gutter);
+  background: linear-gradient(to top, var(--lc-bg) 70%, transparent);
+}
+
+@media (min-width: 720px) {
+  .host__grid--setup {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      'sources sources'
+      'options ready'
+      'cta cta';
+  }
+  .host__grid--live {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      'link link'
+      'viewers metrics';
   }
 }
-.host__side,
-.host__main {
-  display: grid;
-  gap: var(--lc-space-4);
+
+@media (min-width: 1024px) {
+  .host__grid--setup {
+    grid-template-columns: minmax(0, 3fr) minmax(320px, 2fr);
+    grid-template-areas:
+      'sources options'
+      'sources cta'
+      'sources ready';
+  }
+  .host__cta {
+    position: static;
+    margin: 0;
+    padding: 0;
+    background: none;
+  }
+  .host__grid--live {
+    grid-template-columns: minmax(0, 3fr) minmax(320px, 2fr);
+    grid-template-areas:
+      'link viewers'
+      'metrics viewers';
+  }
 }
 </style>

@@ -3,6 +3,7 @@
  * Importe também os tokens uma vez no main.ts do app:  import '@luzocast/ui/tokens.css';
  */
 export { default as LcButton } from './components/LcButton.vue';
+export { default as LcLogo } from './components/LcLogo.vue';
 export { default as LcCard } from './components/LcCard.vue';
 export { default as LcStatusPill } from './components/LcStatusPill.vue';
 export { default as LcVideoStage } from './components/LcVideoStage.vue';

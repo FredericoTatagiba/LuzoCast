@@ -27,7 +27,7 @@ defineEmits<{ 'update:modelValue': [id: string] }>();
 <style scoped>
 .picker {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(150px, calc(50% - 6px)), 1fr));
   gap: var(--lc-space-3);
 }
 .picker__item {

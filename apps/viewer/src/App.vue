@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { LcButton, LcCard, LcStatusPill, LcVideoStage } from '@luzocast/ui';
+import { LcButton, LcCard, LcLogo, LcStatusPill, LcVideoStage } from '@luzocast/ui';
 import JoinForm from './components/JoinForm.vue';
 import { useViewerSession } from './composables/useViewerSession';
 import { loadName, readTokenFromHash, saveName, signalingUrl } from './config';
@@ -35,7 +35,7 @@ function join(name: string) {
 <template>
   <main class="viewer" :class="{ 'viewer--watching': session?.phase.value === 'connected' }">
     <header class="viewer__bar">
-      <strong class="viewer__brand">LuzoCast</strong>
+      <LcLogo class="viewer__brand" compact :size="24" />
       <LcStatusPill v-if="session?.phase.value === 'connected'" tone="live" label="AO VIVO" />
       <LcButton v-if="session?.phase.value === 'connected'" variant="ghost" @click="session.leave()">Sair</LcButton>
     </header>
@@ -66,38 +66,42 @@ function join(name: string) {
 </template>
 
 <style scoped>
+/* Mobile-first; no modo "assistindo" o vídeo ocupa toda a altura útil. */
 .viewer {
+  height: 100dvh;
   min-height: 100dvh;
   display: grid;
-  grid-template-rows: auto 1fr;
-  padding: var(--lc-space-3);
-  padding-bottom: max(var(--lc-space-3), env(safe-area-inset-bottom));
+  grid-template-rows: auto minmax(0, 1fr);
   gap: var(--lc-space-3);
-}
-@media (min-width: 768px) {
-  .viewer {
-    padding: var(--lc-space-6);
-  }
+  padding: var(--lc-gutter);
+  padding-bottom: max(var(--lc-gutter), env(safe-area-inset-bottom));
 }
 .viewer__bar {
   display: flex;
   align-items: center;
   gap: var(--lc-space-3);
+  min-width: 0;
 }
 .viewer__brand {
   margin-right: auto;
-  color: var(--lc-accent);
-  letter-spacing: 0.02em;
 }
 .viewer__center {
   display: grid;
   place-items: center;
+  overflow-y: auto;
 }
 .viewer__center > * {
-  width: min(420px, 100%);
+  width: min(440px, 100%);
 }
 .viewer__stage {
   min-height: 0;
-  height: calc(100dvh - 100px);
+  display: grid;
+}
+/* Celular deitado: menos borda, mais vídeo */
+@media (orientation: landscape) and (max-height: 500px) {
+  .viewer--watching {
+    padding: var(--lc-space-2);
+    gap: var(--lc-space-2);
+  }
 }
 </style>

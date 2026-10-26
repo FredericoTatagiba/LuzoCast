@@ -3,18 +3,19 @@
  * Tema escuro por padrão (conteúdo de tela fica melhor sobre fundo escuro);
  * claro via prefers-color-scheme ou [data-theme="light"].
  *
- * Breakpoints (mobile-first):  --bp-sm 480px · --bp-md 768px · --bp-lg 1100px
+ * Breakpoints (mobile-first):  sm 480px · md 720px · lg 1024px · xl 1440px
  * (CSS não aceita var() em media query; os valores estão repetidos nos componentes.)
  */
 :root {
-  --lc-bg: #0f0e0c;
-  --lc-surface: #1a1815;
-  --lc-surface-2: #24211d;
-  --lc-border: #34302a;
-  --lc-text: #f3eee6;
-  --lc-text-muted: #a8a093;
-  --lc-accent: #f5b13d;       /* luz âmbar */
-  --lc-accent-text: #1a1206;
+  --lc-bg: #0f121a;
+  --lc-surface: #161a24;
+  --lc-surface-2: #1e2330;
+  --lc-border: #2c3243;
+  --lc-text: #eef0f6;
+  --lc-text-muted: #9aa1b5;
+  --lc-accent: #ff7a1a;       /* laranja do play (marca) */
+  --lc-accent-2: #a855f7;     /* roxo do feixe (marca) */
+  --lc-accent-text: #1a0d02;
   --lc-live: #ef4b4b;
   --lc-ok: #4bc98a;
   --lc-warn: #f0a63a;
@@ -32,6 +33,9 @@
   --lc-font-mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
   --lc-shadow: 0 8px 30px rgb(0 0 0 / 0.35);
   --lc-tap: 44px; /* alvo de toque mínimo */
+  /* Espaçamento externo fluido: 12px no celular → 32px em telas largas */
+  --lc-gutter: clamp(12px, 3vw, 32px);
+  --lc-content-max: 1280px;
 
   color-scheme: dark;
 }
@@ -44,7 +48,8 @@
     --lc-border: #e2dbd0;
     --lc-text: #1d1a16;
     --lc-text-muted: #6d655a;
-    --lc-accent: #c98712;
+    --lc-accent: #e0620a;
+    --lc-accent-2: #8b3fd9;
     --lc-accent-text: #ffffff;
     --lc-shadow: 0 8px 30px rgb(0 0 0 / 0.08);
     color-scheme: light;
