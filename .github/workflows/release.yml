@@ -1,11 +1,14 @@
 # Publica o instalador do Windows no GitHub Releases.
-# Dispara ao enviar uma tag de versão:   git tag v0.1.1 && git push origin v0.1.1
-# A versão do instalador vem de apps/host/package.json — mantenha igual à tag.
+# Dispara de duas formas:
+#  - tag de versão:  git tag v0.1.1 && git push origin v0.1.1
+#  - manual: aba Actions → Release → Run workflow (cria a tag v<versão do app> sozinho)
+# A versão do instalador vem de apps/host/package.json.
 name: Release
 
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -23,11 +26,13 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
 
-      - name: Conferir se a tag bate com a versão do app
+      - name: Versão do app (e conferência com a tag)
+        id: version
         shell: pwsh
         run: |
           $v = (Get-Content apps/host/package.json | ConvertFrom-Json).version
-          if ("v$v" -ne "${{ github.ref_name }}") { throw "Tag ${{ github.ref_name }} != versão do app v$v" }
+          if ("${{ github.ref_type }}" -eq "tag" -and "v$v" -ne "${{ github.ref_name }}") { throw "Tag ${{ github.ref_name }} != versão do app v$v" }
+          "tag=v$v" >> $env:GITHUB_OUTPUT
 
       - run: pnpm install --frozen-lockfile
 
@@ -45,6 +50,8 @@ jobs:
 
       - uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
           files: |
             apps/host/release/LuzoCast-Setup-*.exe
             apps/host/release/SHA256SUMS.txt
