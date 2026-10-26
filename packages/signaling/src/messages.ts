@@ -11,9 +11,13 @@ import { z } from 'zod';
 
 export const PROTOCOL_VERSION = 1;
 export const MAX_MESSAGE_BYTES = 32 * 1024;
+/** Maior pedaço de mídia aceito no modo retransmissão (host → servidor). */
+export const MAX_RELAY_CHUNK_BYTES = 2 * 1024 * 1024;
 
 const sdp = z.string().min(1).max(24 * 1024);
 const viewerId = z.string().min(1).max(64);
+/** MIME do fluxo retransmitido, ex.: 'video/webm;codecs=vp8,opus'. */
+const relayMime = z.string().min(1).max(100).regex(/^video\/webm;codecs=[a-z0-9.,]+$/);
 const candidate = z
   .object({
     candidate: z.string().max(1024),
@@ -51,6 +55,8 @@ export const ServerToViewer = z.discriminatedUnion('type', [
   z.object({ type: z.literal('ice'), candidate }),
   z.object({ type: z.literal('kicked') }),
   z.object({ type: z.literal('ended') }),
+  /** P2P falhou: a mídia passa a chegar como frames binários neste mesmo WebSocket. */
+  z.object({ type: z.literal('relay-start'), mime: relayMime }),
 ]);
 export type ServerToViewer = z.infer<typeof ServerToViewer>;
 
@@ -63,6 +69,8 @@ export const HostToServer = z.discriminatedUnion('type', [
   z.object({ type: z.literal('offer'), viewerId, sdp }).strict(),
   z.object({ type: z.literal('ice'), viewerId, candidate }).strict(),
   z.object({ type: z.literal('end') }).strict(),
+  /** Inicia a retransmissão para um viewer cujo P2P falhou (seguido de frames binários). */
+  z.object({ type: z.literal('relay-start'), viewerId, mime: relayMime }).strict(),
 ]);
 export type HostToServer = z.infer<typeof HostToServer>;
 

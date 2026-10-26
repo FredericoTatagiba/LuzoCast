@@ -14,9 +14,19 @@ export class AlertSound {
     this.enabled = enabled;
   }
 
+  /** Nunca lança: PC sem dispositivo de som ativo não pode derrubar o pedido de entrada. */
   play(): void {
     if (!this.enabled) return;
+    try {
+      this.beep();
+    } catch (err) {
+      console.warn('[luzocast] não foi possível tocar o alerta', err);
+    }
+  }
+
+  private beep(): void {
     this.ctx ??= new AudioContext();
+    if (this.ctx.state === 'suspended') void this.ctx.resume().catch(() => undefined);
     const ctx = this.ctx;
     const now = ctx.currentTime;
     // Duas notas ascendentes (Mi5 → Lá5), envelope curto para não assustar.

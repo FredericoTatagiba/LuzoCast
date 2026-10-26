@@ -8,6 +8,8 @@ export interface ViewerItem {
   id: string;
   displayName: string;
   status: 'pending' | 'admitted';
+  /** 'relay' = P2P falhou e o vídeo vai pelo túnel (mais atraso). */
+  route?: 'p2p' | 'relay';
 }
 
 defineProps<{ viewers: readonly ViewerItem[] }>();
@@ -21,6 +23,7 @@ defineEmits<{ admit: [id: string]; reject: [id: string]; kick: [id: string] }>()
       <span class="lc-viewers__name">
         {{ v.displayName }}
         <small v-if="v.status === 'pending'">quer entrar</small>
+        <small v-else-if="v.route === 'relay'" class="lc-viewers__relay" title="A conexão direta falhou; o vídeo chega pelo túnel, com alguns segundos de atraso">via túnel</small>
       </span>
       <span class="lc-viewers__actions">
         <template v-if="v.status === 'pending'">
@@ -81,6 +84,9 @@ defineEmits<{ admit: [id: string]; reject: [id: string]; kick: [id: string] }>()
 .lc-viewers__name small {
   display: block;
   color: var(--lc-accent);
+}
+.lc-viewers__name small.lc-viewers__relay {
+  color: var(--lc-accent-2);
 }
 .lc-viewers__actions {
   grid-area: actions;

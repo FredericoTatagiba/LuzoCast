@@ -11,9 +11,17 @@ const session = token ? useViewerSession(signalingUrl(), token) : null;
 const messages = {
   waiting: { title: 'Aguardando aprovação', body: 'O host precisa aceitar sua entrada. Mantenha esta página aberta.' },
   admitted: { title: 'Aprovado!', body: 'Conectando ao vídeo…' },
+  fallback: {
+    title: 'Tentando outra rota…',
+    body: 'A conexão direta não funcionou na sua rede. Estamos passando o vídeo por um caminho alternativo (pode ter alguns segundos de atraso).',
+  },
   failed: {
     title: 'Não foi possível receber o vídeo',
-    body: 'Sua rede e a do host não conseguiram se conectar diretamente (comum em redes corporativas e algumas operadoras). Tente outra rede, como os dados móveis.',
+    body: 'Nem a conexão direta nem o caminho alternativo funcionaram. Tente outra rede (por exemplo, os dados móveis) ou peça um novo link ao host.',
+  },
+  unsupported: {
+    title: 'Seu navegador não suporta o modo alternativo',
+    body: 'A conexão direta falhou e este navegador (geralmente iPhone/Safari) não consegue tocar o vídeo pelo caminho alternativo. Tente pelo Chrome no Android ou no computador, ou use outra rede.',
   },
   rejected: { title: 'Entrada não permitida', body: 'O link é inválido, expirou ou o host recusou.' },
   kicked: { title: 'Você foi removido', body: 'O host encerrou seu acesso a esta transmissão.' },
@@ -36,12 +44,12 @@ function join(name: string) {
   <main class="viewer" :class="{ 'viewer--watching': session?.phase.value === 'connected' }">
     <header class="viewer__bar">
       <LcLogo class="viewer__brand" compact :size="24" />
-      <LcStatusPill v-if="session?.phase.value === 'connected'" tone="live" label="AO VIVO" />
+      <LcStatusPill v-if="session?.phase.value === 'connected'" tone="live" :label="session.route.value === 'relay' ? 'AO VIVO · via túnel' : 'AO VIVO'" />
       <LcButton v-if="session?.phase.value === 'connected'" variant="ghost" @click="session.leave()">Sair</LcButton>
     </header>
 
     <section v-if="session?.phase.value === 'connected'" class="viewer__stage">
-      <LcVideoStage :stream="session.stream.value" />
+      <LcVideoStage :stream="session.stream.value" :src="session.src.value" @element="session.attachVideo" />
     </section>
 
     <section v-else class="viewer__center">

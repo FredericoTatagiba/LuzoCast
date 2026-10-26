@@ -5,5 +5,6 @@ export * from './PeerConnectionFactory';
 export * from './WebRtcTransport';
 export * from './MseTransport';
 export * from './ViewerPeer';
+export * from './MseRelayPlayer';
 export * from './stats';
 export * from './readiness';

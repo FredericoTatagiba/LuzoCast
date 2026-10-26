@@ -25,3 +25,9 @@ significam 10 encodes e 10 cópias do upload.
 - + Latência mínima para grupos pequenos; escala para grupos grandes.
 - − Dois transportes para manter. Testes de contrato garantem que ambos honram `MediaTransport`.
 - − Sem TURN, ~10–20% dos viewers externos podem falhar no ICE → fallback MSE pelo túnel.
+
+## Atualização (2026-10-26)
+O transporte de encode único entrou primeiro como **fallback do P2P** ("modo retransmissão"):
+se o WebRTC não conecta em 15 s, o host retransmite WebM pelo túnel para aquele viewer
+(`MseTransport` no host, `MseRelayPlayer` no viewer). Limitações: 1–3 s de atraso, um
+`MediaRecorder` por viewer retransmitido e sem suporte no Safari/iPhone (WebM via MSE).

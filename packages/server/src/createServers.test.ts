@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import WebSocket from 'ws';
+import { encodeRelayFrame } from '@luzocast/signaling';
 import { ViewerRegistry } from '@luzocast/core';
 import { AttemptLimiter } from '@luzocast/security';
 import { SignalingHub, createServers, type RunningServers } from './index';
@@ -85,6 +86,31 @@ describe('createServers (integração)', () => {
     host.send(JSON.stringify({ type: 'offer', viewerId: 'v1', sdp: 'v=0' }));
     expect(await offer).toEqual({ type: 'offer', sdp: 'v=0' });
 
+    host.close();
+    viewer.close();
+  });
+
+  it('modo retransmissão: frame binário do host chega ao viewer pelas portas reais', async () => {
+    const s = await boot();
+    const host = await open(`ws://127.0.0.1:${s.controlPort}/ws/host`, 'http://app.local');
+    host.send(JSON.stringify({ type: 'auth', v: 1, secret: 'SECRET' }));
+    await next(host);
+    const viewer = await open(`ws://127.0.0.1:${s.publicPort}/ws/viewer`);
+    const req = next(host);
+    viewer.send(JSON.stringify({ type: 'join', v: 1, token: 'TOKEN', displayName: 'Ana' }));
+    await next(viewer);
+    await req;
+    const admitted = next(viewer);
+    host.send(JSON.stringify({ type: 'admit', viewerId: 'v1' }));
+    await admitted;
+    const relayStart = next(viewer);
+    host.send(JSON.stringify({ type: 'relay-start', viewerId: 'v1', mime: 'video/webm;codecs=vp8,opus' }));
+    expect(await relayStart).toEqual({ type: 'relay-start', mime: 'video/webm;codecs=vp8,opus' });
+    const bin = new Promise<Buffer>((r) => viewer.once('message', (d, isBinary) => isBinary && r(d as Buffer)));
+    host.send(encodeRelayFrame('v1', new Uint8Array(100_000).fill(7)));
+    const got = await bin;
+    expect(got.length).toBe(100_000);
+    expect(got[0]).toBe(7);
     host.close();
     viewer.close();
   });

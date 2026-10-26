@@ -31,6 +31,9 @@ export class SignalingHub extends TypedEventEmitter<SignalingHubEvents> {
     this.control = new ControlChannel({
       verifyHostSecret: deps.verifyHostSecret,
       onCommand: (c) => this.onHostCommand(c),
+      onRelayChunk: (viewerId, chunk) => {
+        if (this.deps.registry.get(viewerId)?.status === 'admitted') this.public.sendBinary(viewerId, chunk);
+      },
     });
     this.public = new PublicChannel({
       registry: deps.registry,
@@ -86,6 +89,9 @@ export class SignalingHub extends TypedEventEmitter<SignalingHubEvents> {
         return;
       case 'ice':
         if (r.get(c.viewerId)?.status === 'admitted') this.public.send(c.viewerId, { type: 'ice', candidate: c.candidate });
+        return;
+      case 'relay-start':
+        if (r.get(c.viewerId)?.status === 'admitted') this.public.send(c.viewerId, { type: 'relay-start', mime: c.mime });
         return;
       case 'end':
         return this.emit('end-requested', undefined);

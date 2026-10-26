@@ -27,7 +27,9 @@ export class PublicChannel {
     let viewerId: ViewerId | null = null;
     const joinTimer = setTimeout(() => socket.close(CloseCode.policyViolation, 'join timeout'), this.deps.joinTimeoutMs ?? 10_000);
 
-    socket.on('message', (data) => {
+    socket.on('message', (data, isBinary) => {
+      // viewers nunca enviam binário (só o host, no canal de controle)
+      if (isBinary) return socket.close(CloseCode.policyViolation, 'binary not allowed');
       const msg = decode(ViewerToServer, toText(data));
       if (!msg.ok) return socket.close(CloseCode.policyViolation, msg.error);
       const m = msg.value;
@@ -66,6 +68,23 @@ export class PublicChannel {
   /** Envia uma mensagem para um viewer específico (no-op se ele já saiu). */
   send(viewerId: ViewerId, message: ServerToViewer): void {
     this.sockets.get(viewerId)?.send(encode(message));
+  }
+
+  /**
+   * Envia um pedaço de mídia (modo retransmissão). Se o viewer não consome rápido o
+   * bastante e o buffer passa de `maxBufferedBytes`, ele é desconectado — melhor do que
+   * acumular memória sem limite no PC do host.
+   */
+  sendBinary(viewerId: ViewerId, chunk: Uint8Array, maxBufferedBytes = 16 * 1024 * 1024): void {
+    const socket = this.sockets.get(viewerId);
+    if (!socket) return;
+    if ((socket.bufferedAmount ?? 0) > maxBufferedBytes) {
+      this.sockets.delete(viewerId);
+      socket.close(CloseCode.tryAgainLater, 'too slow');
+      this.deps.registry.remove(viewerId, 'left');
+      return;
+    }
+    socket.send(chunk);
   }
 
   /** Envia a mensagem final e encerra a conexão do viewer. */

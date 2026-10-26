@@ -22,6 +22,11 @@
 - [x] Ícone do app (`apps/host/build/icon.svg` → `pnpm --filter @luzocast/host icons`)
 - [x] Layout responsivo (celular, janela estreita, tablet, desktop largo)
 
+## Correções de 26/10 (tarde)
+- [x] Áudio: se o loopback falhar, transmite só vídeo e avisa (antes a transmissão não iniciava)
+- [x] Alerta sonoro nunca derruba o pedido de entrada em PC sem som
+- [x] P2P: timeout de 15 s + modo retransmissão pelo túnel; viewer mostra "Tentando outra rota…"
+
 ## Fase 2 — Internet
 - [ ] `CloudflareQuickTunnelProvider` + `TunnelSupervisor` integrados
 - [ ] Link com token no fragment, copiar/compartilhar
@@ -31,7 +36,7 @@
 ## Fase 3 — Escala e qualidade
 - [ ] `AdaptiveQualityStrategy` ligada ao número de viewers e upload medido
 - [ ] Transporte MSE (encode único + fan-out) acima de N viewers
-- [ ] Fallback automático quando ICE falha
+- [x] Fallback automático quando ICE falha (modo retransmissão pelo túnel)
 - [ ] Microfone como trilha opcional
 
 ## Fase 4 — Distribuição

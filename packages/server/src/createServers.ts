@@ -2,7 +2,7 @@ import type { AddressInfo } from 'node:net';
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import fastifyStatic from '@fastify/static';
 import fastifyWebsocket from '@fastify/websocket';
-import { MAX_MESSAGE_BYTES } from '@luzocast/signaling';
+import { MAX_MESSAGE_BYTES, MAX_RELAY_CHUNK_BYTES } from '@luzocast/signaling';
 import type { SignalingHub } from './SignalingHub';
 import { securityHeaders } from './securityHeaders';
 
@@ -32,16 +32,16 @@ export interface RunningServers {
 export async function createServers(opts: CreateServersOptions): Promise<RunningServers> {
   // Só aceita o upgrade WS no caminho exato do canal. Sem isso, o @fastify/static
   // (rota curinga) completaria o handshake em QUALQUER caminho antes de responder 404.
-  const wsOptions = (path: string) => ({
+  const wsOptions = (path: string, maxPayload: number) => ({
     options: {
-      maxPayload: MAX_MESSAGE_BYTES,
+      maxPayload,
       verifyClient: (info: { req: { url?: string } }) => info.req.url === path,
     },
   });
 
   // ── Porta de CONTROLE: sempre 127.0.0.1, nunca tunelada
   const control = Fastify({ logger: false });
-  await control.register(fastifyWebsocket, wsOptions('/ws/host'));
+  await control.register(fastifyWebsocket, wsOptions('/ws/host', MAX_RELAY_CHUNK_BYTES + 128));
   control.get('/ws/host', { websocket: true }, (socket, req) => {
     const origin = req.headers.origin;
     if (origin && !opts.allowedControlOrigins.includes(origin)) return socket.close(1008, 'origin');
@@ -54,7 +54,7 @@ export async function createServers(opts: CreateServersOptions): Promise<Running
   pub.addHook('onSend', async (_req, reply) => {
     reply.headers(securityHeaders());
   });
-  await pub.register(fastifyWebsocket, wsOptions('/ws/viewer'));
+  await pub.register(fastifyWebsocket, wsOptions('/ws/viewer', MAX_MESSAGE_BYTES));
   await pub.register(fastifyStatic, { root: opts.viewerStaticDir, index: 'index.html', dotfiles: 'deny', list: false });
   pub.get('/ws/viewer', { websocket: true }, (socket, req) => {
     opts.hub.acceptViewer(socket, originKey(req, opts.trustProxyHeader()));

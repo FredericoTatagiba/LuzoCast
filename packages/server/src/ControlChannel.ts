@@ -1,5 +1,5 @@
-import { decode, encode, HostToServer, PROTOCOL_VERSION, type ServerToHost } from '@luzocast/signaling';
-import { CloseCode, toText, type MessageSocket } from './socket';
+import { decode, decodeRelayFrame, encode, HostToServer, PROTOCOL_VERSION, type ServerToHost } from '@luzocast/signaling';
+import { CloseCode, toBytes, toText, type MessageSocket } from './socket';
 
 export type HostCommand = Exclude<HostToServer, { type: 'auth' }>;
 
@@ -7,6 +7,8 @@ export interface ControlChannelDeps {
   verifyHostSecret: (secret: string) => boolean;
   /** Chamado para cada comando do host já autenticado e validado. */
   onCommand: (command: HostCommand) => void;
+  /** Pedaço de mídia do modo retransmissão destinado a um viewer. */
+  onRelayChunk?: (viewerId: string, chunk: Uint8Array) => void;
   authTimeoutMs?: number;
 }
 
@@ -27,7 +29,15 @@ export class ControlChannel {
     let authed = false;
     const timer = setTimeout(() => socket.close(CloseCode.policyViolation, 'auth timeout'), this.deps.authTimeoutMs ?? 5_000);
 
-    socket.on('message', (data) => {
+    socket.on('message', (data, isBinary) => {
+      if (isBinary) {
+        // binário só depois de autenticado, e só no formato de frame de retransmissão
+        if (!authed) return socket.close(CloseCode.policyViolation, 'auth first');
+        const frame = decodeRelayFrame(toBytes(data));
+        if (!frame) return socket.close(CloseCode.policyViolation, 'bad frame');
+        this.deps.onRelayChunk?.(frame.viewerId, frame.chunk);
+        return;
+      }
       const msg = decode(HostToServer, toText(data));
       if (!msg.ok) return socket.close(CloseCode.policyViolation, msg.error);
       const m = msg.value;

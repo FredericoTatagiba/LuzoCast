@@ -10,6 +10,11 @@ export interface WebRtcTransportOptions {
    * - 'maintain-framerate' (jogo): movimento fluido, resolução cai.
    */
   degradationPreference?: RTCDegradationPreference;
+  /**
+   * Se o P2P não conectar neste tempo, `onViewerFailed` é chamado (o host então usa o
+   * modo retransmissão). Sem TURN, redes restritas às vezes ficam presas em "checking".
+   */
+  connectTimeoutMs?: number;
 }
 
 /**
@@ -48,8 +53,21 @@ export class WebRtcTransport implements MediaTransport {
     pc.onicecandidate = (e) => {
       if (e.candidate) this.sink.ice(viewerId, e.candidate.toJSON() as never);
     };
+    let reported = false;
+    const fail = () => {
+      if (reported || this.peers.get(viewerId) !== pc) return;
+      reported = true;
+      this.callbacks.onViewerFailed?.(viewerId);
+    };
+    const timer = setTimeout(() => {
+      if (pc.connectionState !== 'connected') fail();
+    }, this.options.connectTimeoutMs ?? 15_000);
     pc.onconnectionstatechange = () => {
-      if (pc.connectionState === 'failed') this.callbacks.onViewerFailed?.(viewerId);
+      if (pc.connectionState === 'connected') clearTimeout(timer);
+      if (pc.connectionState === 'failed') {
+        clearTimeout(timer);
+        fail();
+      }
     };
 
     const offer = await pc.createOffer();

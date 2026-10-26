@@ -1,5 +1,5 @@
 import { TypedEventEmitter } from '@luzocast/core';
-import { decode, encode, PROTOCOL_VERSION, ServerToHost, type HostToServer } from '@luzocast/signaling';
+import { decode, encode, encodeRelayFrame, PROTOCOL_VERSION, ServerToHost, type HostToServer } from '@luzocast/signaling';
 
 type ServerMessage = ServerToHost;
 export type ControlEvents = {
@@ -39,6 +39,11 @@ export class ControlClient extends TypedEventEmitter<ControlEvents> {
 
   send(message: HostToServer): void {
     if (this.ws?.readyState === WebSocket.OPEN) this.ws.send(encode(message));
+  }
+
+  /** Envia um pedaço de mídia do modo retransmissão para um viewer. */
+  sendRelayChunk(viewerId: string, chunk: Uint8Array): void {
+    if (this.ws?.readyState === WebSocket.OPEN) this.ws.send(encodeRelayFrame(viewerId, chunk) as Uint8Array<ArrayBuffer>);
   }
 
   close(): void {

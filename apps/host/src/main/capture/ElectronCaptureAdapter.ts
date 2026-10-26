@@ -31,11 +31,13 @@ export class ElectronCaptureAdapter implements CaptureSourceProvider {
 
   /** Instala o handler de `getDisplayMedia` na sessão do renderer. */
   install(session: Session): void {
-    session.setDisplayMediaRequestHandler((_request, callback) => {
+    session.setDisplayMediaRequestHandler((request, callback) => {
       const sel = this.selected;
       if (!sel) return callback({});
-      // 'loopback' = áudio do sistema (Windows). Sem áudio → só vídeo.
-      callback(sel.systemAudio ? { video: sel.source, audio: 'loopback' } : { video: sel.source });
+      // 'loopback' = áudio do sistema (Windows). Só entrega áudio se o renderer pediu:
+      // na segunda tentativa (sem áudio, após falha do loopback) o pedido vem sem áudio.
+      const withAudio = sel.systemAudio && request.audioRequested;
+      callback(withAudio ? { video: sel.source, audio: 'loopback' } : { video: sel.source });
     });
   }
 }

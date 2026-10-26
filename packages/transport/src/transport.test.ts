@@ -59,3 +59,38 @@ describe('summarizeOutboundStats', () => {
     expect(summarizeOutboundStats([])).toBeNull();
   });
 });
+
+import { MseTransport, pickRelayMime } from './MseTransport';
+
+describe('modo retransmissão (host)', () => {
+  it('escolhe WebM com ou sem áudio conforme suporte', () => {
+    const ok = (m: string) => m.includes('vp8');
+    expect(pickRelayMime(true, ok)).toBe('video/webm;codecs=vp8,opus');
+    expect(pickRelayMime(false, ok)).toBe('video/webm;codecs=vp8');
+    expect(pickRelayMime(true, () => false)).toBeNull();
+  });
+
+  it('anuncia o MIME, encaminha pedaços e para o recorder ao remover', async () => {
+    const started: string[] = [];
+    const chunks: number[] = [];
+    let recorder: { ondataavailable?: (e: { data: Blob }) => void; state: string; start: () => void; stop: () => void } | null = null;
+    const t = new MseTransport(
+      { start: (_id, mime) => started.push(mime), chunk: (_id, d) => chunks.push(d.length) },
+      {
+        isSupported: () => true,
+        createRecorder: () => {
+          recorder = { state: 'recording', start: () => {}, stop() { this.state = 'inactive'; } };
+          return recorder as never;
+        },
+      },
+    );
+    const stream = { getAudioTracks: () => [] } as unknown as MediaStream;
+    await t.addViewer('v1', stream);
+    expect(started).toEqual(['video/webm;codecs=vp8']);
+    recorder!.ondataavailable!({ data: new Blob([new Uint8Array(10)]) });
+    await new Promise((r) => setTimeout(r, 10));
+    expect(chunks).toEqual([10]);
+    t.removeViewer('v1');
+    expect(recorder!.state).toBe('inactive');
+  });
+});

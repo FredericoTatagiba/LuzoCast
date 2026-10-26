@@ -5,16 +5,29 @@
  */
 import { ref, watch, onBeforeUnmount } from 'vue';
 
-const props = withDefaults(defineProps<{ stream: MediaStream | null; startMuted?: boolean }>(), { startMuted: true });
+/** Aceita um MediaStream (P2P) OU uma URL (blob: do MediaSource, modo retransmissão). */
+const props = withDefaults(defineProps<{ stream?: MediaStream | null; src?: string | null; startMuted?: boolean }>(), {
+  stream: null,
+  src: null,
+  startMuted: true,
+});
+const emit = defineEmits<{ element: [HTMLVideoElement] }>();
 const video = ref<HTMLVideoElement | null>(null);
 const muted = ref(props.startMuted);
 
 watch(
-  [() => props.stream, video],
-  ([stream, el]) => {
+  [() => props.stream, () => props.src, video],
+  ([stream, src, el]) => {
     if (!el) return;
-    el.srcObject = stream;
-    if (stream) void el.play().catch(() => undefined);
+    emit('element', el);
+    if (src) {
+      el.srcObject = null;
+      if (el.src !== src) el.src = src;
+    } else {
+      el.removeAttribute('src');
+      el.srcObject = stream;
+    }
+    if (stream || src) void el.play().catch(() => undefined);
   },
   { immediate: true },
 );

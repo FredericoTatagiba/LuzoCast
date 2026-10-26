@@ -38,6 +38,7 @@ inválidas encerram a conexão (código WS `1008 policy violation`).
 | `ice`      | `candidate`            | Candidato ICE do host                          |
 | `kicked`   | —                      | Host removeu o viewer                          |
 | `ended`    | —                      | Transmissão encerrada                          |
+| `relay-start` | `mime`              | P2P falhou: a mídia passa a chegar como **frames binários** (WebM) neste WebSocket |
 
 ## Canal de controle (host ⇄ servidor)
 
@@ -52,6 +53,7 @@ inválidas encerram a conexão (código WS `1008 policy violation`).
 | `offer`  | `viewerId`, `sdp`          |
 | `ice`    | `viewerId`, `candidate`    |
 | `end`    | —                          |
+| `relay-start` | `viewerId`, `mime`    |
 
 `auth` deve ser a primeira mensagem, em até 5 s; caso contrário a conexão é fechada.
 Só uma conexão de controle autenticada por vez.
@@ -80,3 +82,18 @@ Viewer                Servidor                    Host (renderer)
   │◀─▶ ice ◀────────────▶│◀─▶ viewer-ice / ice ◀───────▶│
   │═════════════ mídia WebRTC (P2P, não passa pelo servidor) ═════════════│
 ```
+
+## Modo retransmissão (fallback do P2P)
+
+Quando o WebRTC não conecta em 15 s (ou falha), o host grava o stream com `MediaRecorder`
+(WebM, pedaços de ~250 ms) e envia pelo canal de controle:
+
+```
+host → servidor : {"type":"relay-start","viewerId":"…","mime":"video/webm;codecs=vp8,opus"}
+host → servidor : frames binários  [1 byte: len(viewerId)][viewerId][pedaço WebM]
+servidor → viewer: {"type":"relay-start","mime":"…"}  e depois só o pedaço WebM (binário)
+```
+
+Regras: só o host autenticado envia binário (máx. `MAX_RELAY_CHUNK_BYTES`); viewer que
+enviar binário é desconectado; o MIME é restrito a `video/webm;codecs=…`; viewer que não
+consome rápido (buffer > 16 MB) é desconectado. Código: `packages/signaling/src/relayFrame.ts`.
