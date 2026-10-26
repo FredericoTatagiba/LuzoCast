@@ -4,13 +4,15 @@
  * provavelmente ela deveria ser injetada a partir daqui.
  */
 import { join, resolve } from 'node:path';
-import { app } from 'electron';
+import { app, shell } from 'electron';
 import cloudflaredManifest from '../../resources/cloudflared.json';
 import { AttentionService } from './AttentionService';
 import { ElectronCaptureAdapter } from './capture/ElectronCaptureAdapter';
 import { registerIpc } from './ipc';
 import { MetricsService } from './MetricsService';
 import { CloudflaredCheck, InternetCheck, LanAddressCheck, MemoryCheck, UploadSpeedCheck } from './readiness/checks';
+import { AudioServiceCheck, WindowsMediaCheck } from './readiness/audioChecks';
+import { elevatePowerShell, FixService } from './fixes/FixService';
 import { ReadinessService } from './readiness/ReadinessService';
 import { StreamingController } from './StreamingController';
 import { allowedControlOrigins, createMainWindow } from './window';
@@ -50,6 +52,8 @@ app.whenReady().then(() => {
     new CloudflaredCheck(cloudflaredPath, cloudflaredManifest),
     new LanAddressCheck(),
     new MemoryCheck(),
+    new WindowsMediaCheck(),
+    new AudioServiceCheck(),
   ]);
 
   registerIpc(win, {
@@ -58,6 +62,7 @@ app.whenReady().then(() => {
     attention: new AttentionService(win),
     readiness,
     metrics: new MetricsService(),
+    fixes: new FixService(elevatePowerShell, (url) => shell.openExternal(url)),
   });
 
   app.on('second-instance', () => {

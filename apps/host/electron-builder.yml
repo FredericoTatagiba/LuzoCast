@@ -38,9 +38,12 @@ nsis:
   oneClick: false
   perMachine: false
   allowToChangeInstallationDirectory: true
-  createDesktopShortcut: true
+  # "always": recria o atalho também ao atualizar/reinstalar ("true" só cria na 1ª instalação)
+  createDesktopShortcut: always
   createStartMenuShortcut: true
   shortcutName: LuzoCast
   license: ../../LICENSE
   artifactName: LuzoCast-Setup-${version}.${ext}
   deleteAppDataOnUninstall: true
+  # Detecta Windows N e oferece instalar o Media Feature Pack (build/installer.nsh).
+  include: build/installer.nsh

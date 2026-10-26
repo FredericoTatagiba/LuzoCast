@@ -97,7 +97,10 @@ function start() {
         :items="readiness.items.value"
         :running="readiness.running.value"
         :summary="readiness.summary.value"
+        :busy-action="readiness.busyAction.value"
+        :fix-message="readiness.fixMessage.value"
         @run="readiness.run()"
+        @fix="readiness.fix($event)"
       />
     </div>
 

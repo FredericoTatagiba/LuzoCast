@@ -19,6 +19,8 @@ const api: LuzoApi = {
   requestAttention: (message) => ipcRenderer.invoke(IPC.attention, message),
   runReadinessChecks: () => ipcRenderer.invoke(IPC.readiness),
   getMetrics: () => ipcRenderer.invoke(IPC.metrics),
+  runFix: (id) => ipcRenderer.invoke(IPC.fix, id),
+  prepareAudioProbe: () => ipcRenderer.invoke(IPC.audioProbe),
   onStatus: (l) => subscribe(IPC.status, l),
   onShareUrlChanged: (l) => subscribe(IPC.shareUrl, l),
 };

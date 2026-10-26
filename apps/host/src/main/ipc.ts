@@ -1,7 +1,9 @@
 import { clipboard, ipcMain, type BrowserWindow } from 'electron';
 import { z } from 'zod';
 import type { CaptureSourceProvider } from '@luzocast/core';
-import { IPC } from '../shared/api';
+import { FIX_ACTION_IDS, IPC } from '../shared/api';
+import type { ElectronCaptureAdapter } from './capture/ElectronCaptureAdapter';
+import type { FixService } from './fixes/FixService';
 import type { AttentionService } from './AttentionService';
 import type { MetricsService } from './MetricsService';
 import type { ReadinessService } from './readiness/ReadinessService';
@@ -14,14 +16,16 @@ const StartOptionsSchema = z.object({
   systemAudio: z.boolean(),
 }).strict();
 
+const FixActionSchema = z.enum(FIX_ACTION_IDS);
 const AttentionMessage = z.string().min(1).max(120);
 
 export interface IpcDeps {
   controller: StreamingController;
-  capture: CaptureSourceProvider;
+  capture: CaptureSourceProvider & Pick<ElectronCaptureAdapter, 'selectPrimaryScreen'>;
   attention: AttentionService;
   readiness: ReadinessService;
   metrics: MetricsService;
+  fixes: FixService;
 }
 
 export function registerIpc(win: BrowserWindow, deps: IpcDeps): void {
@@ -40,4 +44,10 @@ export function registerIpc(win: BrowserWindow, deps: IpcDeps): void {
   ipcMain.handle(IPC.attention, (e, raw: unknown) => (guard(e), deps.attention.request(AttentionMessage.parse(raw))));
   ipcMain.handle(IPC.readiness, (e) => (guard(e), deps.readiness.runAll()));
   ipcMain.handle(IPC.metrics, (e) => (guard(e), deps.metrics.snapshot()));
+  ipcMain.handle(IPC.fix, (e, raw: unknown) => (guard(e), deps.fixes.run(FixActionSchema.parse(raw))));
+  ipcMain.handle(IPC.audioProbe, (e) => {
+    guard(e);
+    if (deps.controller.status === 'live' || deps.controller.status === 'starting') return false; // não troca a fonte no meio de uma transmissão
+    return deps.capture.selectPrimaryScreen({ systemAudio: true });
+  });
 }

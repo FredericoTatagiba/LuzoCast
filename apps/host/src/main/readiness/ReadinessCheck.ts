@@ -1,9 +1,10 @@
-import type { CheckStatus, ReadinessItem } from '../../shared/api';
+import type { CheckStatus, FixAction, ReadinessItem } from '../../shared/api';
 
 export interface CheckResult {
   status: CheckStatus;
   detail: string;
   data?: Record<string, number>;
+  action?: FixAction;
 }
 
 /**

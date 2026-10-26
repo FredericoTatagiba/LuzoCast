@@ -29,6 +29,16 @@ export class ElectronCaptureAdapter implements CaptureSourceProvider {
     this.selected = { source, systemAudio: options.systemAudio };
   }
 
+  /** Para o teste de áudio da verificação de prontidão: escolhe a tela principal. */
+  async selectPrimaryScreen(options: { systemAudio: boolean }): Promise<boolean> {
+    const screens = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: 0, height: 0 } });
+    const first = screens[0];
+    if (!first) return false;
+    this.sources.set(first.id, first);
+    this.selected = { source: first, systemAudio: options.systemAudio };
+    return true;
+  }
+
   /** Instala o handler de `getDisplayMedia` na sessão do renderer. */
   install(session: Session): void {
     session.setDisplayMediaRequestHandler((request, callback) => {

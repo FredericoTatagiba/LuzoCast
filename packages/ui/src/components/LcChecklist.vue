@@ -5,9 +5,12 @@ export interface ChecklistItem {
   label: string;
   status: 'ok' | 'warn' | 'fail' | 'pending';
   detail?: string;
+  /** Correção oferecida (botão). O componente só emite o id; quem executa é o pai. */
+  action?: { id: string; label: string };
 }
 
-defineProps<{ items: readonly ChecklistItem[] }>();
+defineProps<{ items: readonly ChecklistItem[]; busyAction?: string | null }>();
+defineEmits<{ action: [id: string] }>();
 
 const icon = { ok: '✓', warn: '!', fail: '✕', pending: '…' } as const;
 </script>
@@ -19,6 +22,15 @@ const icon = { ok: '✓', warn: '!', fail: '✕', pending: '…' } as const;
       <span class="lc-check__text">
         <strong>{{ item.label }}</strong>
         <small v-if="item.detail">{{ item.detail }}</small>
+        <button
+          v-if="item.action && item.status !== 'ok'"
+          type="button"
+          class="lc-check__action"
+          :disabled="!!busyAction"
+          @click="$emit('action', item.action.id)"
+        >
+          {{ busyAction === item.action.id ? 'Aplicando…' : item.action.label }}
+        </button>
       </span>
     </li>
   </ul>
@@ -75,6 +87,22 @@ const icon = { ok: '✓', warn: '!', fail: '✕', pending: '…' } as const;
 .lc-check__text small {
   color: var(--lc-text-muted);
   line-height: 1.4;
+}
+.lc-check__action {
+  justify-self: start;
+  margin-top: var(--lc-space-1, 4px);
+  min-height: 36px;
+  padding: 0 var(--lc-space-3);
+  border: 1px solid var(--lc-accent);
+  border-radius: var(--lc-radius-sm);
+  background: transparent;
+  color: var(--lc-accent);
+  font: 600 0.85rem var(--lc-font);
+  cursor: pointer;
+}
+.lc-check__action:disabled {
+  opacity: 0.6;
+  cursor: progress;
 }
 @keyframes lc-blink {
   50% {

@@ -1,3 +1,4 @@
+import { describeAudioError } from './audioProbe';
 import { TypedEventEmitter } from '@luzocast/core';
 import { AdaptiveQualityStrategy, MseTransport, WebRtcTransport, type MediaTransport, type QualityStrategy, type TransportStats } from '@luzocast/transport';
 import type { StartOptions } from '../../../shared/api';
@@ -163,8 +164,7 @@ export class HostStreamingService extends TypedEventEmitter<HostServiceEvents> {
     } catch (err) {
       console.warn('[luzocast] captura com áudio falhou; tentando só vídeo', err);
       const stream = await navigator.mediaDevices.getDisplayMedia({ video, audio: false });
-      this.captureWarning =
-        'Não foi possível capturar o áudio do PC (verifique se há um dispositivo de som ativo). Transmitindo só o vídeo.';
+      this.captureWarning = `${describeAudioError(err)} Transmitindo só o vídeo — use "Verificar se está tudo pronto" para corrigir.`;
       return stream;
     }
   }
