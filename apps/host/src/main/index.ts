@@ -5,6 +5,7 @@
  */
 import { join, resolve } from 'node:path';
 import { app } from 'electron';
+import cloudConfig from '../../resources/cloud.json';
 import cloudflaredManifest from '../../resources/cloudflared.json';
 import { AttentionService } from './AttentionService';
 import { ElectronCaptureAdapter } from './capture/ElectronCaptureAdapter';
@@ -23,6 +24,8 @@ const viewerStaticDir = isDev ? resolve(__dirname, '../../../viewer/dist') : joi
 const cloudflaredPath = isDev
   ? resolve(__dirname, '../../resources/bin/cloudflared.exe')
   : join(process.resourcesPath, 'bin', 'cloudflared.exe');
+/** Link personalizado: desligado enquanto `brokerUrl` for null (ver docs/link-personalizado.md). */
+const brokerUrl = process.env['LUZOCAST_BROKER_URL'] || cloudConfig.brokerUrl || null;
 
 // Necessário para notificações nativas no Windows mostrarem o nome do app.
 app.setAppUserModelId('io.github.fredericotatagiba.luzocast');
@@ -39,6 +42,7 @@ app.whenReady().then(() => {
     capture,
     viewerStaticDir,
     cloudflaredPath,
+    brokerUrl,
     allowedControlOrigins: allowedControlOrigins(),
     onStatus: (e) => win.webContents.send(IPC.status, e),
     onShareUrl: (url) => win.webContents.send(IPC.shareUrl, url),

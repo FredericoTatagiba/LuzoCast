@@ -81,3 +81,73 @@ describe('pickLanAddress', () => {
     expect(pickLanAddress({ 'vEthernet (Default Switch)': nic('172.30.1.1') })).toBeUndefined();
   });
 });
+
+describe('LuzoCloudTunnelProvider', () => {
+  const session = { sessionId: 'abc234', hostname: 'abc234.luzocast.app', tunnelToken: 'TOK', deleteSecret: 'DEL' };
+
+  it('pede sessão ao broker, passa o token por env e devolve o link personalizado', async () => {
+    const { LuzoCloudTunnelProvider } = await import('./LuzoCloudTunnelProvider');
+    const child = fakeChild();
+    let spawnEnv: Record<string, string> = {};
+    let spawnArgs: string[] = [];
+    const fetchFn = async (url: string, init: RequestInit) => {
+      if (init.method === 'POST') return new Response(JSON.stringify(session), { status: 201 });
+      return new Response(null, { status: 204 });
+    };
+    const p = new LuzoCloudTunnelProvider({
+      brokerUrl: 'https://api.luzocast.app',
+      binaryPath: 'cloudflared',
+      fetchFn: fetchFn as never,
+      spawnFn: ((_bin: string, args: string[], o: { env: Record<string, string> }) => {
+        spawnArgs = args;
+        spawnEnv = o.env;
+        return child;
+      }) as never,
+    });
+    const started = p.start(51234);
+    await new Promise((r) => setTimeout(r, 0));
+    child.stderr.emit('data', Buffer.from('INF Registered tunnel connection connIndex=0'));
+    await expect(started).resolves.toEqual({ baseUrl: 'https://abc234.luzocast.app', secure: true, behindTrustedProxy: true });
+    expect(spawnEnv['TUNNEL_TOKEN']).toBe('TOK');
+    expect(spawnArgs.join(' ')).not.toContain('TOK'); // token nunca em argumento
+    await p.stop();
+  });
+
+  it('mensagem amigável quando o broker está lotado', async () => {
+    const { LuzoCloudTunnelProvider } = await import('./LuzoCloudTunnelProvider');
+    const p = new LuzoCloudTunnelProvider({
+      brokerUrl: 'https://x',
+      binaryPath: 'c',
+      fetchFn: (async () => new Response(JSON.stringify({ error: 'capacity' }), { status: 503 })) as never,
+    });
+    await expect(p.start(51234)).rejects.toThrow(/lotado/);
+  });
+});
+
+describe('FallbackTunnelProvider', () => {
+  const provider = (name: string, ok: boolean): TunnelProvider => {
+    const e = new TypedEventEmitter<TunnelEvents>();
+    return Object.assign(e, {
+      name,
+      start: async () => {
+        if (!ok) throw new Error(`${name} falhou`);
+        return { baseUrl: `https://${name}`, secure: true, behindTrustedProxy: true };
+      },
+      stop: async () => {},
+    });
+  };
+
+  it('usa o segundo quando o primeiro falha e avisa', async () => {
+    const { FallbackTunnelProvider } = await import('./FallbackTunnelProvider');
+    const fallbacks: string[] = [];
+    const p = new FallbackTunnelProvider([provider('cloud', false), provider('quick', true)], (from, to) => fallbacks.push(`${from}->${to}`));
+    expect((await p.start(1)).baseUrl).toBe('https://quick');
+    expect(fallbacks).toEqual(['cloud->quick']);
+    expect(p.name).toBe('quick');
+  });
+
+  it('propaga o erro se todos falharem', async () => {
+    const { FallbackTunnelProvider } = await import('./FallbackTunnelProvider');
+    await expect(new FallbackTunnelProvider([provider('a', false), provider('b', false)]).start(1)).rejects.toThrow('b falhou');
+  });
+});

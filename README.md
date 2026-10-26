@@ -66,6 +66,8 @@ packages/
   server/        Servidor local (porta de controle + porta pública)
   transport/     Transporte de mídia (WebRTC, MSE), qualidade adaptativa
   ui/            Componentes Vue reutilizáveis e responsivos
+services/
+  tunnel-broker/ Cloudflare Worker do link personalizado (opcional)
 docs/            Arquitetura, segurança, protocolo, patterns, roadmap, ADRs
 ```
 
@@ -78,6 +80,7 @@ docs/            Arquitetura, segurança, protocolo, patterns, roadmap, ADRs
 | [Protocolo](docs/signaling-protocol.md) | Mensagens de sinalização |
 | [Design patterns](docs/design-patterns.md) | Padrões adotados e SOLID |
 | [Desempenho e jogos](docs/performance.md) | RAM, gargalos, perfis |
+| [Link personalizado](docs/link-personalizado.md) | Como ativar `abc123.seu-dominio` |
 | [Roadmap](docs/roadmap.md) | Fases e riscos |
 | [ADRs](docs/adr/README.md) | Decisões de arquitetura |
 

@@ -1,0 +1,4 @@
+{
+  "$comment": "Link personalizado (ADR-0009). Deixe brokerUrl null até publicar o Worker em services/tunnel-broker. Em dev dá para sobrescrever com a variável LUZOCAST_BROKER_URL.",
+  "brokerUrl": null
+}

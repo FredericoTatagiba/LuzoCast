@@ -2,13 +2,25 @@ import { existsSync } from 'node:fs';
 import { LuzoError, Session, ViewerRegistry, type CaptureSourceProvider, type SessionStatus } from '@luzocast/core';
 import { AttemptLimiter, SessionCredentials, generateId } from '@luzocast/security';
 import { SignalingHub, createServers, type RunningServers } from '@luzocast/server';
-import { CloudflareQuickTunnelProvider, LanOnlyProvider, TunnelSupervisor, type TunnelProvider } from '@luzocast/tunnel';
+import {
+  CloudflareQuickTunnelProvider,
+  FallbackTunnelProvider,
+  LanOnlyProvider,
+  LuzoCloudTunnelProvider,
+  TunnelSupervisor,
+  type TunnelProvider,
+} from '@luzocast/tunnel';
 import type { StartOptions, StartResult } from '../shared/api';
 
 export interface StreamingControllerDeps {
   capture: CaptureSourceProvider;
   viewerStaticDir: string;
   cloudflaredPath: string;
+  /**
+   * URL do broker de link personalizado (ADR-0009). `null` = desligado: usa só o
+   * link aleatório do quick tunnel. Configurado em resources/cloud.json.
+   */
+  brokerUrl: string | null;
   allowedControlOrigins: string[];
   maxViewers?: number;
   onStatus: (e: { status: SessionStatus; reason?: string }) => void;
@@ -99,7 +111,13 @@ export class StreamingController {
     if (!existsSync(this.deps.cloudflaredPath)) {
       throw new LuzoError('cloudflared-missing', 'cloudflared não encontrado. Rode "pnpm --filter @luzocast/host fetch:cloudflared" ou use o modo rede local.');
     }
-    return new CloudflareQuickTunnelProvider({ binaryPath: this.deps.cloudflaredPath });
+    const quick = new CloudflareQuickTunnelProvider({ binaryPath: this.deps.cloudflaredPath });
+    if (!this.deps.brokerUrl) return quick;
+    // Link personalizado primeiro; se o broker estiver fora/lotado, cai no link aleatório.
+    const cloud = new LuzoCloudTunnelProvider({ brokerUrl: this.deps.brokerUrl, binaryPath: this.deps.cloudflaredPath });
+    return new FallbackTunnelProvider([cloud, quick], (from, to, err) =>
+      console.warn(`[luzocast] ${from} falhou (${err instanceof Error ? err.message : err}); usando ${to}`),
+    );
   }
 
   private async teardown(): Promise<void> {

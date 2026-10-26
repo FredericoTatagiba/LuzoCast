@@ -13,6 +13,6 @@ decisão, crie um ADR novo com status `Aceito` e marque o antigo como `Substitu�
 | [0006](./0006-licenca-agpl-cla.md) | AGPL-3.0 + CLA | Aceito |
 | [0007](./0007-monorepo-pnpm.md) | Monorepo com pnpm workspaces | Aceito |
 | [0008](./0008-audio-por-janela.md) | Áudio só da janela capturada | Proposto |
-| [0009](./0009-link-personalizado.md) | Link personalizado (`luzocast-<id>`) | Proposto |
+| [0009](./0009-link-personalizado.md) | Link personalizado (`luzocast-<id>`) | Aceito (desligado até haver domínio) |
 
 Modelo: [`template.md`](./template.md).

@@ -1,0 +1,13 @@
+{
+  "name": "@luzocast/tunnel-broker",
+  "version": "0.0.0",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "description": "Cloudflare Worker que cria um túnel nomeado + subdomínio por sessão (link personalizado).",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "deploy": "npx wrangler@4 deploy",
+    "dev": "npx wrangler@4 dev"
+  }
+}

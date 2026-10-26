@@ -1,6 +1,7 @@
 packages:
   - "apps/*"
   - "packages/*"
+  - "services/*"
 
 # Segurança da cadeia de dependências: só instala versões publicadas há pelo menos
 # 24 h (1440 min). Pacotes comprometidos costumam ser retirados do npm nesse intervalo.

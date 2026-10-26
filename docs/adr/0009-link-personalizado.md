@@ -1,6 +1,6 @@
 # ADR-0009: Link personalizado (`luzocast-<id>`)
 
-- **Status:** Proposto (não implementado)
+- **Status:** Aceito — implementado na branch `feat/link-personalizado`, desligado até haver domínio
 - **Data:** 2026-10-26
 
 ## Contexto
@@ -23,6 +23,11 @@ o relay também provisiona o túnel nomeado. Entra como novo `TunnelProvider`
 (`LuzoCloudTunnelProvider`) sem mudar o resto do app.
 
 Importante: o `<id>` no link **não é** o token de acesso — o token continua no `#fragment`.
+
+## Implementação
+Ver [docs/link-personalizado.md](../link-personalizado.md). Em vez de um servidor próprio, o
+backend é um **Cloudflare Worker** (sem máquina para manter, plano gratuito). O app tenta o
+link personalizado e, se o broker falhar, cai no quick tunnel (`FallbackTunnelProvider`).
 
 ## Consequências
 - + Link bonito e confiável; fim do aviso de domínio aleatório.

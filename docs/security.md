@@ -22,6 +22,8 @@
 | T11 | Renderer comprometido acessando Node             | `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`, preload expõe API mínima | `apps/host/src/main/window.ts` |
 | T13 | Nome do viewer em notificação nativa         | Texto puro, máx. 120 caracteres, validado no IPC; notificações do Windows não interpretam HTML | `apps/host/src/main/AttentionService.ts` |
 | T14 | Chamadas externas na verificação de prontidão | Só endpoints da Cloudflare (`cdn-cgi/trace`, `speed.cloudflare.com`), feitos pelo main, só quando o usuário clica; nada de dados pessoais enviados (4 MB de zeros) | `apps/host/src/main/readiness/checks.ts` |
+| T15 | Abuso do broker de link personalizado (criar túneis na conta do dono) | Rate limit por IP, teto de sessões ativas, TTL + cron de limpeza; chave da API só no Worker, com permissão mínima (Tunnel + DNS de UMA zona). Pendente: autenticação por instalação | `services/tunnel-broker` |
+| T16 | Token do túnel nomeado visível para outros processos | Passado ao `cloudflared` por variável de ambiente (`TUNNEL_TOKEN`), nunca por argumento; só o segredo de encerramento é guardado (como hash) no broker | `tunnel/LuzoCloudTunnelProvider` |
 | T12 | Handshake WS aceito em caminhos arbitrários        | `verifyClient` só aceita upgrade no caminho exato de cada canal; testado em `createServers.test.ts` | `server/createServers` |
 
 ## Regras para quem contribui

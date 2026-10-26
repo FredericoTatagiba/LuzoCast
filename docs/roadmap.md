@@ -18,7 +18,7 @@
 - [x] Viewer: estados "Aprovado, conectando…" e "falha de conexão" (antes ficava em "Aguardando")
 - [x] Escolha do IP da LAN ignora adaptadores virtuais (WSL, Docker, Hyper-V, VPNs)
 - [ ] Áudio só da janela capturada — [ADR-0008](./adr/0008-audio-por-janela.md)
-- [ ] Link personalizado — [ADR-0009](./adr/0009-link-personalizado.md)
+- [x] Link personalizado (código) — [ADR-0009](./adr/0009-link-personalizado.md); falta domínio + [ativação](./link-personalizado.md)
 - [ ] Ícone do app (`apps/host/build/icon.ico`)
 
 ## Fase 2 — Internet
