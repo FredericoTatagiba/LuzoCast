@@ -1,0 +1,22 @@
+{
+  "name": "luzocast",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev:host": "pnpm --filter @luzocast/host dev",
+    "dev:viewer": "pnpm --filter @luzocast/viewer dev",
+    "build": "pnpm --filter @luzocast/viewer build && pnpm --filter @luzocast/host build",
+    "typecheck": "pnpm -r --parallel typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "~5.7.2",
+    "vitest": "^3.0.0"
+  }
+}

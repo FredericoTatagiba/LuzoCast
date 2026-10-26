@@ -147,3 +147,10 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# --- LuzoCast / Electron ---
+out/
+release/
+apps/host/resources/bin/
+*.tsbuildinfo
+.DS_Store
