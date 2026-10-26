@@ -10,6 +10,11 @@ const session = token ? useViewerSession(signalingUrl(), token) : null;
 
 const messages = {
   waiting: { title: 'Aguardando aprovação', body: 'O host precisa aceitar sua entrada. Mantenha esta página aberta.' },
+  admitted: { title: 'Aprovado!', body: 'Conectando ao vídeo…' },
+  failed: {
+    title: 'Não foi possível receber o vídeo',
+    body: 'Sua rede e a do host não conseguiram se conectar diretamente (comum em redes corporativas e algumas operadoras). Tente outra rede, como os dados móveis.',
+  },
   rejected: { title: 'Entrada não permitida', body: 'O link é inválido, expirou ou o host recusou.' },
   kicked: { title: 'Você foi removido', body: 'O host encerrou seu acesso a esta transmissão.' },
   ended: { title: 'Transmissão encerrada', body: 'Obrigado por assistir!' },

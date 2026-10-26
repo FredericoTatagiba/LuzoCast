@@ -5,8 +5,13 @@
  */
 import { join, resolve } from 'node:path';
 import { app } from 'electron';
+import cloudflaredManifest from '../../resources/cloudflared.json';
+import { AttentionService } from './AttentionService';
 import { ElectronCaptureAdapter } from './capture/ElectronCaptureAdapter';
 import { registerIpc } from './ipc';
+import { MetricsService } from './MetricsService';
+import { CloudflaredCheck, InternetCheck, LanAddressCheck, MemoryCheck, UploadSpeedCheck } from './readiness/checks';
+import { ReadinessService } from './readiness/ReadinessService';
 import { StreamingController } from './StreamingController';
 import { allowedControlOrigins, createMainWindow } from './window';
 import { IPC } from '../shared/api';
@@ -18,6 +23,9 @@ const viewerStaticDir = isDev ? resolve(__dirname, '../../../viewer/dist') : joi
 const cloudflaredPath = isDev
   ? resolve(__dirname, '../../resources/bin/cloudflared.exe')
   : join(process.resourcesPath, 'bin', 'cloudflared.exe');
+
+// Necessário para notificações nativas no Windows mostrarem o nome do app.
+app.setAppUserModelId('io.github.fredericotatagiba.luzocast');
 
 // Uma instância só: duas instâncias brigariam pela captura e pelo túnel.
 if (!app.requestSingleInstanceLock()) app.quit();
@@ -36,7 +44,21 @@ app.whenReady().then(() => {
     onShareUrl: (url) => win.webContents.send(IPC.shareUrl, url),
   });
 
-  registerIpc(win, controller, capture);
+  const readiness = new ReadinessService([
+    new InternetCheck(),
+    new UploadSpeedCheck(),
+    new CloudflaredCheck(cloudflaredPath, cloudflaredManifest),
+    new LanAddressCheck(),
+    new MemoryCheck(),
+  ]);
+
+  registerIpc(win, {
+    controller,
+    capture,
+    attention: new AttentionService(win),
+    readiness,
+    metrics: new MetricsService(),
+  });
 
   app.on('second-instance', () => {
     if (win.isMinimized()) win.restore();

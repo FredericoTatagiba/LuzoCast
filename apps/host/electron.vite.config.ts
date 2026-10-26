@@ -1,16 +1,23 @@
 import { resolve } from 'node:path';
-import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
+import { defineConfig } from 'electron-vite';
 import vue from '@vitejs/plugin-vue';
 
-// Pacotes internos são fonte TS (ADR-0007): precisam ser BUNDLADOS, não externalizados.
-// Por isso ficam em devDependencies; as dependências de runtime deles (fastify, ws, zod)
-// ficam em dependencies para serem externalizadas e empacotadas no instalador.
+// O main é BUNDLADO por completo (pacotes internos + fastify/ws/zod). Assim o instalador
+// não precisa de node_modules: só `out/` vai para o app.asar. Apenas `electron` e os
+// módulos nativos do Node ficam externos (o electron-vite faz isso automaticamente).
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()],
+    build: {
+      rollupOptions: {
+        // Dependências OPCIONAIS carregadas com require dentro de try/catch. Se forem
+        // bundladas, o rollup quebra o fallback e o WebSocket falha em runtime
+        // ("bufferUtil.mask is not a function"). Externas, o require falha e a
+        // biblioteca usa a implementação em JS puro. Teste: docs/performance.md#bundle.
+        external: ['pino-pretty', 'bufferutil', 'utf-8-validate'],
+      },
+    },
   },
   preload: {
-    plugins: [externalizeDepsPlugin()],
     build: {
       // sandbox: true exige preload em CommonJS
       rollupOptions: { output: { format: 'cjs', entryFileNames: '[name].js' } },

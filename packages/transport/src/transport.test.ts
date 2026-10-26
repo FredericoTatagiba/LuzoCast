@@ -35,3 +35,27 @@ describe('preferredVideoCodecs', () => {
     expect(preferredVideoCodecs(codecs).map((c) => c.mimeType)).toEqual(['video/H264', 'video/VP8', 'video/VP9', 'video/rtx']);
   });
 });
+
+import { summarizeOutboundStats } from './stats';
+
+describe('perfil de jogo', () => {
+  it('mantém 60 fps com banda sobrando e cai para 30 quando aperta', () => {
+    const q = new AdaptiveQualityStrategy({ uploadKbps: 20_000, targetFps: 60 });
+    expect(q.profileFor(1).maxFramerate).toBe(60);
+    expect(q.profileFor(12).maxFramerate).toBe(30);
+  });
+});
+
+describe('summarizeOutboundStats', () => {
+  it('reporta software se algum viewer caiu para encoder de CPU', () => {
+    const r = summarizeOutboundStats([
+      { encoderImplementation: 'MediaFoundationVideoEncodeAccelerator', powerEfficientEncoder: true, qualityLimitationReason: 'none', framesPerSecond: 60, frameHeight: 1080 },
+      { encoderImplementation: 'OpenH264', qualityLimitationReason: 'cpu', framesPerSecond: 24, frameHeight: 720 },
+    ]);
+    expect(r).toEqual({ encoderImplementation: 'OpenH264', hardwareEncoder: false, qualityLimitation: 'cpu', framesPerSecond: 24, frameHeight: 720 });
+  });
+
+  it('null sem viewers', () => {
+    expect(summarizeOutboundStats([])).toBeNull();
+  });
+});

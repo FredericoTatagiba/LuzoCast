@@ -1,0 +1,48 @@
+# Instalador do LuzoCast (Windows, NSIS).
+# Gera: apps/host/release/LuzoCast-Setup-<versão>.exe
+# O instalador já leva TUDO que o app precisa: Electron, página do viewer e cloudflared.
+# O usuário final não precisa de Node, pnpm nem de baixar nada.
+appId: io.github.fredericotatagiba.luzocast
+productName: LuzoCast
+copyright: Copyright © 2026 Frederico Tatagiba
+directories:
+  output: release
+  buildResources: build
+
+# O main é bundlado (electron.vite.config.ts), então só `out/` entra no app.asar.
+files:
+  - out/**
+  - package.json
+  - "!**/*.map"
+# Nada de node_modules no pacote: todas as dependências já estão no bundle.
+includeSubNodeModules: false
+npmRebuild: false
+nodeGypRebuild: false
+buildDependenciesFromSource: false
+
+extraResources:
+  - from: ../viewer/dist
+    to: viewer
+  - from: resources/bin/cloudflared.exe
+    to: bin/cloudflared.exe
+
+asar: true
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  # Sem certificado de code signing por enquanto: o SmartScreen vai mostrar
+  # "Editor desconhecido" (Fase 4 do roadmap).
+  signAndEditExecutable: true
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: LuzoCast
+  license: ../../LICENSE
+  artifactName: LuzoCast-Setup-${version}.${ext}
+  deleteAppDataOnUninstall: true

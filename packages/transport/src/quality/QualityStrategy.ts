@@ -18,6 +18,8 @@ export interface AdaptiveQualityOptions {
   headroom?: number;
   floorKbps?: number;
   ceilingKbps?: number;
+  /** FPS alvo: 30 (apresentação) ou 60 (jogo). Com pouco bitrate o fps cai junto. */
+  targetFps?: number;
 }
 
 /**
@@ -28,12 +30,12 @@ export class AdaptiveQualityStrategy implements QualityStrategy {
   constructor(private readonly opts: AdaptiveQualityOptions) {}
 
   profileFor(viewerCount: number): QualityProfile {
-    const { uploadKbps, headroom = 0.8, floorKbps = 400, ceilingKbps = 6000 } = this.opts;
+    const { uploadKbps, headroom = 0.8, floorKbps = 400, ceilingKbps = 6000, targetFps = 30 } = this.opts;
     const n = Math.max(1, viewerCount);
     const perViewer = Math.round(Math.min(ceilingKbps, Math.max(floorKbps, (uploadKbps * headroom) / n)));
     return {
       maxBitrateKbps: perViewer,
-      maxFramerate: perViewer >= 2500 ? 30 : perViewer >= 1000 ? 24 : 15,
+      maxFramerate: perViewer >= 2500 ? targetFps : perViewer >= 1000 ? Math.min(targetFps, 30) : Math.min(targetFps, 15),
       scaleResolutionDownBy: perViewer >= 3500 ? 1 : perViewer >= 1500 ? 1.5 : 2,
     };
   }

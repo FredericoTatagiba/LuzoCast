@@ -154,3 +154,4 @@ release/
 apps/host/resources/bin/
 *.tsbuildinfo
 .DS_Store
+dev-log.txt

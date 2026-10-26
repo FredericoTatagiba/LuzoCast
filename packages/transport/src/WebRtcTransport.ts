@@ -1,10 +1,23 @@
-import type { MediaTransport, InboundSignal, SignalSink, TransportCallbacks } from './MediaTransport';
+import type { MediaTransport, InboundSignal, SignalSink, TransportCallbacks, TransportStats } from './MediaTransport';
 import { PeerConnectionFactory, preferredVideoCodecs } from './PeerConnectionFactory';
 import type { QualityProfile } from './quality/QualityStrategy';
+import { summarizeOutboundStats } from './stats';
+
+export interface WebRtcTransportOptions {
+  /**
+   * O que sacrificar quando falta banda/CPU:
+   * - 'maintain-resolution' (apresentação): texto nítido, fps cai;
+   * - 'maintain-framerate' (jogo): movimento fluido, resolução cai.
+   */
+  degradationPreference?: RTCDegradationPreference;
+}
 
 /**
  * Transporte padrão: uma RTCPeerConnection `sendonly` por viewer.
  * Não cria DataChannel — o viewer não tem como enviar nada pela conexão de mídia.
+ *
+ * ⚠️ Cada viewer = 1 encoder. Em GPUs NVIDIA de consumo há limite de sessões NVENC
+ * simultâneas; acima dele o Chromium cai para encoder de software (CPU). Ver docs/performance.md.
  */
 export class WebRtcTransport implements MediaTransport {
   readonly kind = 'webrtc' as const;
@@ -15,6 +28,7 @@ export class WebRtcTransport implements MediaTransport {
     private readonly sink: SignalSink,
     private readonly factory = new PeerConnectionFactory(),
     private readonly callbacks: TransportCallbacks = {},
+    private readonly options: WebRtcTransportOptions = {},
   ) {}
 
   get viewerCount(): number {
@@ -40,7 +54,7 @@ export class WebRtcTransport implements MediaTransport {
 
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
-    if (this.quality) await this.applyTo(pc, this.quality);
+    await this.applyTo(pc, this.quality);
     this.sink.offer(viewerId, pc.localDescription?.sdp ?? offer.sdp ?? '');
   }
 
@@ -61,6 +75,18 @@ export class WebRtcTransport implements MediaTransport {
     await Promise.all([...this.peers.values()].map((pc) => this.applyTo(pc, profile)));
   }
 
+  async getStats(): Promise<TransportStats | null> {
+    if (this.peers.size === 0) return null;
+    const reports = await Promise.all([...this.peers.values()].map((pc) => pc.getStats().catch(() => null)));
+    const outbound: Record<string, unknown>[] = [];
+    for (const report of reports) {
+      report?.forEach((s: Record<string, unknown>) => {
+        if (s['type'] === 'outbound-rtp' && s['kind'] === 'video') outbound.push(s);
+      });
+    }
+    return summarizeOutboundStats(outbound);
+  }
+
   close(): void {
     for (const id of [...this.peers.keys()]) this.removeViewer(id);
   }
@@ -72,18 +98,19 @@ export class WebRtcTransport implements MediaTransport {
     }
   }
 
-  private async applyTo(pc: RTCPeerConnection, q: QualityProfile): Promise<void> {
+  private async applyTo(pc: RTCPeerConnection, q: QualityProfile | null): Promise<void> {
     for (const sender of pc.getSenders()) {
       if (sender.track?.kind !== 'video') continue;
       const params = sender.getParameters();
       if (!params.encodings?.length) params.encodings = [{}];
-      for (const enc of params.encodings) {
-        enc.maxBitrate = q.maxBitrateKbps * 1000;
-        enc.maxFramerate = q.maxFramerate;
-        enc.scaleResolutionDownBy = q.scaleResolutionDownBy;
+      if (q) {
+        for (const enc of params.encodings) {
+          enc.maxBitrate = q.maxBitrateKbps * 1000;
+          enc.maxFramerate = q.maxFramerate;
+          enc.scaleResolutionDownBy = q.scaleResolutionDownBy;
+        }
       }
-      // conteúdo de tela: priorizar nitidez sobre fluidez
-      params.degradationPreference = 'maintain-resolution';
+      params.degradationPreference = this.options.degradationPreference ?? 'maintain-resolution';
       await sender.setParameters(params).catch(() => undefined);
     }
   }

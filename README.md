@@ -32,15 +32,24 @@ aprovação. Detalhes em [`docs/security.md`](docs/security.md).
 - **Host:** Windows 10/11 (macOS/Linux no futuro).
 - **Espectador:** qualquer navegador moderno (Chrome, Edge, Firefox, Safari), desktop ou celular.
 
+## Instalação (usuário final)
+
+Baixe `LuzoCast-Setup-x.y.z.exe` nos Releases e instale. O instalador já traz tudo
+(Electron, página do espectador e túnel) — não precisa de Node nem de nada mais.
+Sem certificado de assinatura ainda: o Windows pode mostrar "Editor desconhecido" →
+*Mais informações* → *Executar assim mesmo*.
+
+Antes da primeira transmissão, use **Verificar se está tudo pronto** no app.
+
 ## Desenvolvimento
 
-```bash
-corepack enable          # habilita o pnpm
-pnpm install
+```powershell
+pnpm run setup:dev       # Windows: confere Node/pnpm, instala, corrige Electron, baixa cloudflared, testa
 pnpm dev:host            # abre o app Electron em modo dev
 pnpm dev:viewer          # página do espectador isolada (http://localhost:5173)
 pnpm typecheck           # checa tipos de todo o monorepo
-pnpm test                # testes unitários
+pnpm test                # testes unitários e de integração
+pnpm dist                # gera o instalador em apps/host/release/
 ```
 
 ### Estrutura
@@ -68,6 +77,7 @@ docs/            Arquitetura, segurança, protocolo, patterns, roadmap, ADRs
 | [Segurança](docs/security.md) | Ameaças e mitigações |
 | [Protocolo](docs/signaling-protocol.md) | Mensagens de sinalização |
 | [Design patterns](docs/design-patterns.md) | Padrões adotados e SOLID |
+| [Desempenho e jogos](docs/performance.md) | RAM, gargalos, perfis |
 | [Roadmap](docs/roadmap.md) | Fases e riscos |
 | [ADRs](docs/adr/README.md) | Decisões de arquitetura |
 

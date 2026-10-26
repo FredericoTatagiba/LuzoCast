@@ -12,7 +12,9 @@
     "build": "pnpm --filter @luzocast/viewer build && pnpm --filter @luzocast/host build",
     "typecheck": "pnpm -r --parallel typecheck",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "dist": "pnpm --filter @luzocast/host dist",
+    "setup:dev": "powershell -ExecutionPolicy Bypass -File scripts/setup-dev.ps1"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

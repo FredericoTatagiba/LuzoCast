@@ -1,17 +1,32 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { LcButton, LcCard, LcLinkCard, LcStatusPill, LcViewerList, type PillTone } from '@luzocast/ui';
+import { LcButton, LcCard, LcLinkCard, LcStatGrid, LcStatusPill, LcViewerList, type PillTone } from '@luzocast/ui';
 import type { NetworkMode } from '../../shared/api';
+import ReadinessCard from './components/ReadinessCard.vue';
 import SourcePicker from './components/SourcePicker.vue';
+import StreamOptions from './components/StreamOptions.vue';
 import { useHost } from './composables/useHost';
+import { useLiveMetrics } from './composables/useLiveMetrics';
+import { usePersistentRef } from './composables/usePersistentRef';
+import { useReadiness } from './composables/useReadiness';
+import type { StreamProfileId } from './services/streamProfiles';
 
-const host = useHost();
+// Preferências lembradas entre aberturas do app
+const mode = usePersistentRef<NetworkMode>('mode', 'internet');
+const profile = usePersistentRef<StreamProfileId>('profile', 'game');
+const systemAudio = usePersistentRef('systemAudio', true);
+const alertSound = usePersistentRef('alertSound', true);
+
+const host = useHost(alertSound);
+const readiness = useReadiness();
 const sourceId = ref<string | null>(null);
-const mode = ref<NetworkMode>('internet');
-const systemAudio = ref(true);
 
 const isLive = computed(() => host.status.value === 'live');
 const busy = computed(() => host.status.value === 'starting' || host.status.value === 'stopping');
+const metrics = useLiveMetrics(isLive, host.getStats);
+const captureIsWindow = computed(() => host.sources.value.find((s) => s.id === sourceId.value)?.kind === 'window');
+const admittedCount = computed(() => host.viewers.value.filter((v) => v.status === 'admitted').length);
+
 const pill = computed<{ tone: PillTone; label: string }>(() => {
   switch (host.status.value) {
     case 'live':
@@ -28,7 +43,14 @@ const pill = computed<{ tone: PillTone; label: string }>(() => {
 onMounted(() => void host.loadSources());
 
 function start() {
-  if (sourceId.value) void host.start(sourceId.value, mode.value, systemAudio.value);
+  if (!sourceId.value) return;
+  void host.start({
+    sourceId: sourceId.value,
+    mode: mode.value,
+    systemAudio: systemAudio.value,
+    profile: profile.value,
+    uploadKbps: readiness.uploadKbps.value,
+  });
 }
 </script>
 
@@ -50,32 +72,51 @@ function start() {
         </template>
       </LcCard>
 
-      <LcCard>
-        <template #title>Opções</template>
-        <fieldset class="host__options">
-          <label><input v-model="mode" type="radio" value="internet" /> Internet (link público)</label>
-          <label><input v-model="mode" type="radio" value="lan" /> Somente rede local</label>
-          <label><input v-model="systemAudio" type="checkbox" /> Incluir áudio do sistema</label>
-        </fieldset>
-        <template #actions>
-          <LcButton size="lg" block :disabled="!sourceId || busy" @click="start">
-            {{ busy ? 'Iniciando…' : 'Transmitir' }}
-          </LcButton>
-        </template>
-      </LcCard>
+      <div class="host__side">
+        <LcCard>
+          <template #title>Opções</template>
+          <StreamOptions
+            v-model:mode="mode"
+            v-model:profile="profile"
+            v-model:system-audio="systemAudio"
+            v-model:alert-sound="alertSound"
+            :capture-is-window="captureIsWindow"
+            @test-alert="host.testAlert()"
+          />
+          <template #actions>
+            <LcButton size="lg" block :disabled="!sourceId || busy" @click="start">
+              {{ busy ? 'Iniciando…' : 'Transmitir' }}
+            </LcButton>
+          </template>
+        </LcCard>
+
+        <ReadinessCard
+          :items="readiness.items.value"
+          :running="readiness.running.value"
+          :summary="readiness.summary.value"
+          @run="readiness.run()"
+        />
+      </div>
     </div>
 
     <div v-else class="host__grid">
-      <LcCard>
-        <template #title>Envie este link</template>
-        <LcLinkCard v-if="host.shareUrl.value" :url="host.shareUrl.value" :warning="host.warning.value ?? undefined" @copy="host.copy(host.shareUrl.value)" />
-        <template #actions>
-          <LcButton variant="danger" block :disabled="busy" @click="host.stop()">Encerrar transmissão</LcButton>
-        </template>
-      </LcCard>
+      <div class="host__main">
+        <LcCard>
+          <template #title>Envie este link</template>
+          <LcLinkCard v-if="host.shareUrl.value" :url="host.shareUrl.value" :warning="host.warning.value ?? undefined" @copy="host.copy(host.shareUrl.value)" />
+          <template #actions>
+            <LcButton variant="danger" block :disabled="busy" @click="host.stop()">Encerrar transmissão</LcButton>
+          </template>
+        </LcCard>
+
+        <LcCard v-if="metrics.items.value.length">
+          <template #title>Desempenho</template>
+          <LcStatGrid :items="metrics.items.value" />
+        </LcCard>
+      </div>
 
       <LcCard>
-        <template #title>Espectadores ({{ host.viewers.value.filter((v) => v.status === 'admitted').length }})</template>
+        <template #title>Espectadores ({{ admittedCount }})</template>
         <LcViewerList :viewers="host.viewers.value" @admit="host.admit" @reject="host.reject" @kick="host.kick" />
       </LcCard>
     </div>
@@ -118,22 +159,13 @@ function start() {
 }
 @media (min-width: 900px) {
   .host__grid {
-    grid-template-columns: 2fr 1fr;
+    grid-template-columns: 3fr 2fr;
     align-items: start;
   }
 }
-.host__options {
+.host__side,
+.host__main {
   display: grid;
-  gap: var(--lc-space-3);
-  margin: 0;
-  padding: 0;
-  border: 0;
-  color: var(--lc-text);
-}
-.host__options label {
-  display: flex;
-  gap: var(--lc-space-2);
-  align-items: center;
-  min-height: var(--lc-tap);
+  gap: var(--lc-space-4);
 }
 </style>

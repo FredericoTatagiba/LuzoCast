@@ -1,7 +1,8 @@
 import { TypedEventEmitter } from '@luzocast/core';
-import { AdaptiveQualityStrategy, WebRtcTransport, type MediaTransport, type QualityStrategy } from '@luzocast/transport';
+import { AdaptiveQualityStrategy, WebRtcTransport, type MediaTransport, type QualityStrategy, type TransportStats } from '@luzocast/transport';
 import type { StartOptions } from '../../../shared/api';
 import { ControlClient } from './ControlClient';
+import { STREAM_PROFILES, type StreamProfileId } from './streamProfiles';
 
 export interface HostViewer {
   id: string;
@@ -11,10 +12,23 @@ export interface HostViewer {
 
 export interface HostServiceEvents extends Record<string, unknown> {
   viewers: readonly HostViewer[];
+  /** Novo pedido de entrada (a UI decide como alertar). */
+  'viewer-request': HostViewer;
   'share-url': string;
   warning: string | null;
   stopped: { reason?: string };
 }
+
+export interface HostStartOptions extends StartOptions {
+  profile: StreamProfileId;
+  /** Upload medido na verificação de prontidão; sem medição usa 10 Mbps (conservador). */
+  uploadKbps?: number;
+}
+
+/** Fábrica de política de qualidade (injetável para testes ou outras políticas). */
+export type QualityFactory = (opts: { uploadKbps: number; targetFps: number }) => QualityStrategy;
+
+const defaultQuality: QualityFactory = (o) => new AdaptiveQualityStrategy(o);
 
 /**
  * Facade do lado do host: a UI chama start/stop/admit/reject/kick e escuta eventos.
@@ -24,32 +38,38 @@ export class HostStreamingService extends TypedEventEmitter<HostServiceEvents> {
   private control: ControlClient | null = null;
   private transport: MediaTransport | null = null;
   private stream: MediaStream | null = null;
+  private quality: QualityStrategy | null = null;
   private readonly viewers = new Map<string, HostViewer>();
 
   constructor(
     private readonly api = window.luzo,
-    // TODO(Fase 3): medir o upload real; 10 Mbps é um palpite conservador
-    private readonly quality: QualityStrategy = new AdaptiveQualityStrategy({ uploadKbps: 10_000 }),
+    private readonly createQuality: QualityFactory = defaultQuality,
   ) {
     super();
     api.onShareUrlChanged((url) => this.emit('share-url', url));
   }
 
-  async start(options: StartOptions): Promise<void> {
-    const result = await this.api.start(options);
+  async start(options: HostStartOptions): Promise<void> {
+    const { profile: profileId, uploadKbps, ...mainOptions } = options;
+    const profile = STREAM_PROFILES[profileId];
+    const result = await this.api.start(mainOptions);
     try {
       // O handler no main entrega a fonte escolhida + áudio loopback; nada de picker aqui.
-      this.stream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 30 }, audio: options.systemAudio });
+      this.stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { frameRate: { ideal: profile.fps, max: profile.fps } },
+        audio: options.systemAudio,
+      });
       this.stream.getVideoTracks()[0]?.addEventListener('ended', () => void this.stop('captura encerrada'));
-      // Dica ao encoder: conteúdo de tela (texto nítido)
-      this.stream.getVideoTracks().forEach((t) => (t.contentHint = 'detail'));
+      this.stream.getVideoTracks().forEach((t) => (t.contentHint = profile.contentHint));
 
+      this.quality = this.createQuality({ uploadKbps: uploadKbps ?? 10_000, targetFps: profile.fps });
       const control = new ControlClient();
       this.control = control;
       this.transport = new WebRtcTransport(
         { offer: (viewerId, sdp) => control.send({ type: 'offer', viewerId, sdp }), ice: (viewerId, candidate) => control.send({ type: 'ice', viewerId, candidate }) },
         undefined,
         { onViewerFailed: (id) => this.kick(id) },
+        { degradationPreference: profile.degradationPreference },
       );
       this.wire(control);
       await control.connect(result.controlUrl, result.hostSecret);
@@ -79,6 +99,11 @@ export class HostStreamingService extends TypedEventEmitter<HostServiceEvents> {
     this.control?.send({ type: 'kick', viewerId: id });
   }
 
+  /** Diagnóstico do encode (hardware/software, gargalo, fps). `null` sem viewers. */
+  getStats(): Promise<TransportStats | null> {
+    return this.transport?.getStats() ?? Promise.resolve(null);
+  }
+
   async stop(reason?: string): Promise<void> {
     this.control?.send({ type: 'end' });
     this.control?.close();
@@ -87,6 +112,7 @@ export class HostStreamingService extends TypedEventEmitter<HostServiceEvents> {
     this.transport = null;
     this.stream?.getTracks().forEach((t) => t.stop());
     this.stream = null;
+    this.quality = null;
     this.viewers.clear();
     this.emitViewers();
     await this.api.stop();
@@ -95,8 +121,10 @@ export class HostStreamingService extends TypedEventEmitter<HostServiceEvents> {
 
   private wire(control: ControlClient): void {
     control.on('viewer-request', ({ viewerId, displayName }) => {
-      this.viewers.set(viewerId, { id: viewerId, displayName, status: 'pending' });
+      const viewer: HostViewer = { id: viewerId, displayName, status: 'pending' };
+      this.viewers.set(viewerId, viewer);
       this.emitViewers();
+      this.emit('viewer-request', viewer);
     });
     control.on('viewer-answer', ({ viewerId, sdp }) => void this.transport?.handleSignal(viewerId, { type: 'answer', sdp }));
     control.on('viewer-ice', ({ viewerId, candidate }) => void this.transport?.handleSignal(viewerId, { type: 'ice', candidate }));
@@ -112,7 +140,7 @@ export class HostStreamingService extends TypedEventEmitter<HostServiceEvents> {
   }
 
   private async rebalance(): Promise<void> {
-    if (this.transport) await this.transport.applyQuality(this.quality.profileFor(this.transport.viewerCount));
+    if (this.transport && this.quality) await this.transport.applyQuality(this.quality.profileFor(this.transport.viewerCount));
   }
 
   private emitViewers(): void {

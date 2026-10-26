@@ -61,3 +61,23 @@ describe('TunnelSupervisor', () => {
     await sup.stop();
   });
 });
+
+describe('pickLanAddress', () => {
+  const nic = (address: string) => [{ address, family: 'IPv4', internal: false } as never];
+
+  it('ignora adaptadores do WSL/Docker e prefere 192.168', async () => {
+    const { pickLanAddress } = await import('./LanOnlyProvider');
+    expect(
+      pickLanAddress({
+        'vEthernet (WSL)': nic('172.22.80.1'),
+        'Ethernet 2': nic('10.0.0.5'),
+        'Wi-Fi': nic('192.168.0.12'),
+      }),
+    ).toBe('192.168.0.12');
+  });
+
+  it('não devolve nada se só houver adaptadores virtuais', async () => {
+    const { pickLanAddress } = await import('./LanOnlyProvider');
+    expect(pickLanAddress({ 'vEthernet (Default Switch)': nic('172.30.1.1') })).toBeUndefined();
+  });
+});

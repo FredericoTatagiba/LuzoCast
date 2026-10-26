@@ -2,7 +2,17 @@ import { onBeforeUnmount, ref, shallowRef } from 'vue';
 import { decode, encode, PROTOCOL_VERSION, ServerToViewer, type RejectReason, type ViewerToServer } from '@luzocast/signaling';
 import { ViewerPeer } from '@luzocast/transport';
 
-export type ViewerPhase = 'idle' | 'connecting' | 'waiting' | 'connected' | 'rejected' | 'kicked' | 'ended' | 'disconnected';
+export type ViewerPhase =
+  | 'idle'
+  | 'connecting'
+  | 'waiting'
+  | 'admitted'
+  | 'connected'
+  | 'failed'
+  | 'rejected'
+  | 'kicked'
+  | 'ended'
+  | 'disconnected';
 
 /**
  * Lógica do espectador: WebSocket de sinalização + ViewerPeer.
@@ -24,7 +34,7 @@ export function useViewerSession(url: string, token: string) {
     ws.onopen = () => send({ type: 'join', v: PROTOCOL_VERSION, token, displayName });
     ws.onmessage = (e) => void handle(String(e.data));
     ws.onclose = () => {
-      if (phase.value === 'connecting' || phase.value === 'waiting' || phase.value === 'connected') phase.value = 'disconnected';
+      if (['connecting', 'waiting', 'admitted', 'connected'].includes(phase.value)) phase.value = 'disconnected';
     };
   }
 
@@ -37,6 +47,7 @@ export function useViewerSession(url: string, token: string) {
         phase.value = 'waiting';
         return;
       case 'admitted':
+        phase.value = 'admitted';
         peer = new ViewerPeer({
           onStream: (s) => {
             stream.value = s;
@@ -44,6 +55,10 @@ export function useViewerSession(url: string, token: string) {
           },
           onIce: (candidate) => send({ type: 'ice', candidate }),
           onAnswer: (sdp) => send({ type: 'answer', sdp }),
+          // ICE falhou: nenhum caminho de rede entre host e viewer (NAT restritivo, sem TURN)
+          onStateChange: (state) => {
+            if (state === 'failed') finish('failed');
+          },
         });
         return;
       case 'offer':
@@ -56,7 +71,8 @@ export function useViewerSession(url: string, token: string) {
         rejectReason.value = m.reason;
         return finish('rejected');
       case 'kicked':
-        return finish('kicked');
+        // o host remove automaticamente quem falhou; mantém a mensagem de falha
+        return finish(phase.value === 'failed' ? 'failed' : 'kicked');
       case 'ended':
         return finish('ended');
     }

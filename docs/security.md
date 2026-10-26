@@ -20,6 +20,8 @@
 | T9 | Captura além do pretendido                        | Usuário escolhe tela/janela; indicador "AO VIVO" sempre visível            | `apps/host/src/renderer` |
 | T10 | Binários desatualizados (Electron, cloudflared)  | Auto-update (Fase 4); versão do cloudflared fixada e verificada por hash   | roadmap |
 | T11 | Renderer comprometido acessando Node             | `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`, preload expõe API mínima | `apps/host/src/main/window.ts` |
+| T13 | Nome do viewer em notificação nativa         | Texto puro, máx. 120 caracteres, validado no IPC; notificações do Windows não interpretam HTML | `apps/host/src/main/AttentionService.ts` |
+| T14 | Chamadas externas na verificação de prontidão | Só endpoints da Cloudflare (`cdn-cgi/trace`, `speed.cloudflare.com`), feitos pelo main, só quando o usuário clica; nada de dados pessoais enviados (4 MB de zeros) | `apps/host/src/main/readiness/checks.ts` |
 | T12 | Handshake WS aceito em caminhos arbitrários        | `verifyClient` só aceita upgrade no caminho exato de cada canal; testado em `createServers.test.ts` | `server/createServers` |
 
 ## Regras para quem contribui

@@ -13,6 +13,8 @@ introduzir outros; se precisar de um novo, registre aqui e em um ADR.
 | **Adapter**   | `apps/host/src/main/capture/ElectronCaptureAdapter.ts` (porta `CaptureSourceProvider`) | Isola a API do Electron; facilita macOS depois |
 | **Facade**    | `apps/host/src/renderer/src/services/HostStreamingService.ts`        | UI chama `start()/stop()/admit()/kick()` sem saber de WebRTC |
 | **Supervisor**| `tunnel/TunnelSupervisor`                                | Reinicia o túnel com backoff e avisa quando o link muda |
+| **Composite** | `apps/host/src/main/readiness/ReadinessService` | Roda N verificações como se fossem uma só |
+| **Strategy** (perfis/checks) | `streamProfiles.ts`, `ReadinessCheck` | Novo perfil ou verificação = nova entrada, sem mexer em quem usa |
 | **Composition Root** | `apps/host/src/main/index.ts`                     | Único lugar que instancia implementações concretas |
 
 ## SOLID na prática

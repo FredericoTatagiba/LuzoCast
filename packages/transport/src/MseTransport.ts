@@ -1,4 +1,4 @@
-import type { InboundSignal, MediaTransport } from './MediaTransport';
+import type { InboundSignal, MediaTransport, TransportStats } from './MediaTransport';
 import type { QualityProfile } from './quality/QualityStrategy';
 
 /**
@@ -18,5 +18,8 @@ export class MseTransport implements MediaTransport {
   async handleSignal(_viewerId: string, _signal: InboundSignal): Promise<void> {}
   removeViewer(_viewerId: string): void {}
   async applyQuality(_profile: QualityProfile): Promise<void> {}
+  async getStats(): Promise<TransportStats | null> {
+    return null;
+  }
   close(): void {}
 }

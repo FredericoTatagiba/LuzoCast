@@ -2,7 +2,19 @@ packages:
   - "apps/*"
   - "packages/*"
 
-# Electron baixa o binário no postinstall; liberado explicitamente.
-onlyBuiltDependencies:
-  - electron
-  - esbuild
+# Segurança da cadeia de dependências: só instala versões publicadas há pelo menos
+# 24 h (1440 min). Pacotes comprometidos costumam ser retirados do npm nesse intervalo.
+minimumReleaseAge: 1440
+
+# rollup 4.65.x referencia binários de plataforma publicados há menos de 24 h.
+# Fixado até a próxima versão madura; remova o override depois.
+overrides:
+  rollup: 4.64.12
+
+# Pacotes autorizados a rodar scripts de instalação (o pnpm bloqueia os demais).
+# electron: baixa o binário do Electron; esbuild: instala o binário da plataforma.
+allowBuilds:
+  electron: true
+  esbuild: true
+  # dependência opcional do electron-builder (Squirrel); usamos NSIS, não precisa rodar
+  electron-winstaller: false
